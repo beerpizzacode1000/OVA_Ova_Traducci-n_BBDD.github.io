@@ -1,943 +1,1744 @@
-<!DOCTYPE html>
+_<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OVA: Traducción ER a Modelo Relacional</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OVA – Traducción de Modelos ER | UNICORDOBA</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Libre+Baskerville:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde: #2d7a4f;
+  --verde-claro: #4caf82;
+  --verde-palido: #e8f5ee;
+  --verde-oscuro: #1a4d32;
+  --gris-oscuro: #1e2228;
+  --gris-medio: #3a4050;
+  --gris-claro: #f4f6f8;
+  --blanco: #ffffff;
+  --acento: #f0a500;
+  --acento2: #e05a2b;
+  --sombra: 0 4px 20px rgba(0,0,0,0.09);
+  --radio: 12px;
+}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
+body {
+  font-family: 'Sora', sans-serif;
+  background: #f0f3f0;
+  color: var(--gris-oscuro);
+  min-height: 100vh;
+}
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+/* ── HEADER ── */
+.hero {
+  background: linear-gradient(135deg, var(--verde-oscuro) 0%, var(--verde) 60%, var(--verde-claro) 100%);
+  color: white;
+  padding: 3rem 2rem 2.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 999px;
+  padding: 4px 18px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.hero h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: .7rem;
+}
+.hero p {
+  font-size: 1rem;
+  opacity: .85;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+}
+.hero-meta {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 13px;
+  opacity: .8;
+}
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
 
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--verde-oscuro);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  padding: .75rem 1.2rem;
+  color: rgba(255,255,255,.65);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all .2s;
+  user-select: none;
+}
+.nav-tab:hover { color: white; background: rgba(255,255,255,.08); }
+.nav-tab.active { color: white; border-bottom-color: var(--acento); }
 
-        .subtitle {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+/* ── MAIN LAYOUT ── */
+.container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+.section { display: none; }
+.section.active { display: block; }
 
-        .nav-tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            overflow-x: auto;
-        }
+/* ── CARDS ── */
+.card {
+  background: white;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--verde-oscuro);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.card-title .icon {
+  width: 32px; height: 32px;
+  background: var(--verde-palido);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
 
-        .nav-tab {
-            padding: 15px 25px;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            font-size: 1em;
-            font-weight: 600;
-            color: #495057;
-            transition: all 0.3s;
-            border-bottom: 3px solid transparent;
-            white-space: nowrap;
-        }
+/* ── BADGES ── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.badge-verde { background: var(--verde-palido); color: var(--verde-oscuro); }
+.badge-naranja { background: #fff3e0; color: #c65000; }
+.badge-azul { background: #e8f0fe; color: #1a4cad; }
+.badge-rojo { background: #fce8e6; color: #b31412; }
 
-        .nav-tab:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-        }
+/* ── DEFINICIÓN HIGHLIGHT ── */
+.def-box {
+  background: var(--verde-palido);
+  border-left: 4px solid var(--verde);
+  border-radius: 0 8px 8px 0;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+.def-box .term { font-weight: 700; color: var(--verde-oscuro); margin-bottom: .3rem; }
+.def-box p { font-size: .92rem; line-height: 1.65; color: var(--gris-medio); }
 
-        .nav-tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            background: white;
-        }
+/* ── EJEMPLO BOX ── */
+.ejemplo {
+  background: #fffbf0;
+  border: 1.5px dashed var(--acento);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+.ejemplo .ej-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--acento);
+  margin-bottom: .5rem;
+}
 
-        .content {
-            padding: 30px;
-        }
+/* ── CÓDIGO ── */
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--gris-oscuro);
+  color: #a8d8a8;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  font-size: .82rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin: .8rem 0;
+}
+.code-block .kw { color: #79b8ff; }
+.code-block .cm { color: #6a737d; font-style: italic; }
+.code-block .str { color: #ffcb6b; }
+.code-block .pk { color: #f97583; font-weight: 700; }
+.code-block .fk { color: #ff9f43; }
 
-        .tab-content {
-            display: none;
-        }
+/* ── TABLA RELACIONAL ── */
+.rel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+  margin: .8rem 0;
+}
+.rel-table th {
+  background: var(--verde);
+  color: white;
+  padding: .55rem .8rem;
+  text-align: left;
+  font-weight: 600;
+}
+.rel-table td {
+  padding: .5rem .8rem;
+  border-bottom: 1px solid #e8ede8;
+}
+.rel-table tr:nth-child(even) td { background: var(--verde-palido); }
+.rel-table td.pk { color: var(--verde-oscuro); font-weight: 700; }
+.rel-table td.fk { color: #c65000; font-weight: 600; }
 
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s;
-        }
+/* ── TABS INTERNAS ── */
+.inner-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.inner-tab {
+  padding: .4rem .9rem;
+  border: 1.5px solid var(--verde);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--verde);
+  cursor: pointer;
+  transition: all .2s;
+}
+.inner-tab.active, .inner-tab:hover {
+  background: var(--verde);
+  color: white;
+}
+.inner-panel { display: none; }
+.inner-panel.active { display: block; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+/* ── ER DIAGRAM ── */
+.er-wrap {
+  overflow-x: auto;
+  background: #f8faf8;
+  border: 1px solid #dde9dd;
+  border-radius: 10px;
+  padding: 1rem;
+}
+.er-svg { min-width: 700px; }
 
-        .concept-box {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
+/* ── INTERACTIVE QUIZ ── */
+.quiz-q {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: var(--gris-oscuro);
+}
+.quiz-options { display: flex; flex-direction: column; gap: .6rem; }
+.quiz-opt {
+  padding: .7rem 1rem;
+  border: 1.5px solid #dde9dd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .92rem;
+  transition: all .2s;
+  position: relative;
+}
+.quiz-opt:hover { border-color: var(--verde); background: var(--verde-palido); }
+.quiz-opt.correct { border-color: #2d7a4f; background: #e8f5ee; color: #1a4d32; }
+.quiz-opt.wrong { border-color: #e05a2b; background: #fce8e6; color: #8b2000; }
+.quiz-feedback {
+  margin-top: 1rem;
+  padding: .9rem;
+  border-radius: 8px;
+  font-size: .9rem;
+  display: none;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.ok { background: #e8f5ee; color: #1a4d32; border-left: 4px solid var(--verde); }
+.quiz-feedback.ko { background: #fce8e6; color: #8b2000; border-left: 4px solid var(--acento2); }
+.quiz-nav { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+.btn {
+  padding: .6rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: .88rem;
+  cursor: pointer;
+  border: none;
+  transition: all .18s;
+}
+.btn-verde { background: var(--verde); color: white; }
+.btn-verde:hover { background: var(--verde-oscuro); }
+.btn-outline { background: transparent; border: 1.5px solid var(--verde); color: var(--verde); }
+.btn-outline:hover { background: var(--verde-palido); }
+.btn-acento { background: var(--acento); color: white; }
+.btn-acento:hover { background: #c88400; }
 
-        .concept-box h3 {
-            margin-bottom: 10px;
-            font-size: 1.5em;
-        }
+/* ── PROGRESS BAR ── */
+.progress-wrap { background: #dde9dd; border-radius: 999px; height: 8px; overflow: hidden; margin: 1rem 0; }
+.progress-bar { background: var(--verde); height: 100%; border-radius: 999px; transition: width .4s; }
 
-        .info-box {
-            background: #e3f2fd;
-            border-left: 5px solid #2196f3;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 5px;
-        }
+/* ── OPERACIONALIZACIÓN ── */
+.ciclo-steps { display: flex; flex-direction: column; gap: 0; }
+.ciclo-step {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid #e8ede8;
+  align-items: flex-start;
+}
+.ciclo-step:last-child { border-bottom: none; }
+.step-num {
+  width: 42px; height: 42px;
+  background: var(--verde);
+  color: white;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.step-content h4 { font-size: 1rem; font-weight: 700; color: var(--verde-oscuro); margin-bottom: .3rem; }
+.step-content p { font-size: .88rem; color: var(--gris-medio); line-height: 1.6; }
+.step-tag { display: inline-block; margin-top: .5rem; }
 
-        .warning-box {
-            background: #fff3cd;
-            border-left: 5px solid #ffc107;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 5px;
-        }
+/* ── INTERACTIVE TRANSLATION ── */
+.trans-demo {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  gap: .5rem;
+  align-items: start;
+}
+.trans-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1.5rem;
+  font-size: 1.8rem;
+  color: var(--verde);
+}
+.trans-box {
+  background: var(--verde-palido);
+  border: 1.5px solid var(--verde);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.trans-box h5 { font-size: .82rem; text-transform: uppercase; letter-spacing: 1px; color: var(--verde-oscuro); margin-bottom: .7rem; }
+.trans-result { background: #f0f8ff; border: 1.5px solid #6ab0f5; }
 
-        .success-box {
-            background: #d4edda;
-            border-left: 5px solid #28a745;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 5px;
-        }
+/* ── RESUMEN / MAPA ── */
+.map-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 1rem; }
+.map-card {
+  border-radius: 10px;
+  padding: 1.1rem;
+  border: 1.5px solid transparent;
+}
+.map-card.m-verde { background: var(--verde-palido); border-color: var(--verde); }
+.map-card.m-azul { background: #e8f0fe; border-color: #5a7ecf; }
+.map-card.m-naranja { background: #fff3e0; border-color: #f0a500; }
+.map-card.m-rojo { background: #fce8e6; border-color: #e05a2b; }
+.map-card h4 { font-size: .92rem; font-weight: 700; margin-bottom: .5rem; }
+.map-card ul { padding-left: 1.1rem; font-size: .84rem; line-height: 1.8; color: var(--gris-medio); }
 
-        .card {
-            background: white;
-            border: 2px solid #dee2e6;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 15px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
+/* ── DOMINIO INTERACTIVO ── */
+.dom-selector { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.dom-chip {
+  padding: .35rem .9rem;
+  border-radius: 999px;
+  border: 1.5px solid #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .18s;
+}
+.dom-chip.sel { background: var(--verde); color: white; border-color: var(--verde); }
+.dom-result-box {
+  background: var(--gris-claro);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  min-height: 80px;
+  transition: all .3s;
+}
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
+/* ── ACCORDION ── */
+.acc-item { border-bottom: 1px solid #e0e8e0; }
+.acc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .9rem 0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .95rem;
+}
+.acc-arrow { transition: transform .25s; font-size: 1.1rem; }
+.acc-item.open .acc-arrow { transform: rotate(90deg); }
+.acc-body { display: none; padding-bottom: 1rem; font-size: .9rem; line-height: 1.7; color: var(--gris-medio); }
+.acc-item.open .acc-body { display: block; }
 
-        .card h4 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f0f0; }
+::-webkit-scrollbar-thumb { background: #aaccaa; border-radius: 3px; }
 
-        .interactive-example {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        .er-diagram {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 20px;
-            flex-wrap: wrap;
-        }
-
-        .entity {
-            background: #fff;
-            border: 3px solid #667eea;
-            border-radius: 10px;
-            padding: 15px 25px;
-            font-weight: bold;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        }
-
-        .relationship {
-            background: #ffc107;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        }
-
-        .table-result {
-            background: white;
-            border: 2px solid #28a745;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        .table-result table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .table-result th {
-            background: #28a745;
-            color: white;
-            padding: 10px;
-            text-align: left;
-        }
-
-        .table-result td {
-            border: 1px solid #dee2e6;
-            padding: 10px;
-        }
-
-        .pk {
-            background: #ffc107;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-
-        .fk {
-            background: #17a2b8;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .quiz-option {
-            background: white;
-            border: 2px solid #dee2e6;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .quiz-option:hover {
-            border-color: #667eea;
-            background: #f8f9fa;
-        }
-
-        .quiz-option.correct {
-            border-color: #28a745;
-            background: #d4edda;
-        }
-
-        .quiz-option.incorrect {
-            border-color: #dc3545;
-            background: #f8d7da;
-        }
-        
-        #hospital-feedback {
-            margin-top: 15px;
-            padding: 15px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        .progress-bar {
-            background: #e9ecef;
-            height: 30px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
-            transition: width 0.5s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .workshop-area {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        .workshop-input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #dee2e6;
-            border-radius: 5px;
-            font-size: 1em;
-            margin: 10px 0;
-        }
-
-        .workshop-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        textarea.workshop-input {
-            min-height: 100px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .code-block {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Courier New', monospace;
-            margin: 15px 0;
-        }
-
-        .highlight {
-            background: yellow;
-            padding: 2px 5px;
-            border-radius: 3px;
-        }
-
-        .step-indicator {
-            display: flex;
-            justify-content: space-between;
-            margin: 30px 0;
-        }
-
-        .step {
-            flex: 1;
-            text-align: center;
-            padding: 15px;
-            background: #e9ecef;
-            margin: 0 5px;
-            border-radius: 10px;
-            position: relative;
-        }
-
-        .step.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .step.completed {
-            background: #28a745;
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .nav-tab {
-                padding: 12px 15px;
-                font-size: 0.9em;
-            }
-
-            .content {
-                padding: 15px;
-            }
-
-            .er-diagram {
-                flex-direction: column;
-            }
-
-            .step-indicator {
-                flex-direction: column;
-            }
-
-            .step {
-                margin: 5px 0;
-            }
-        }
-    </style>
+@media (max-width: 650px) {
+  .trans-demo { grid-template-columns: 1fr; }
+  .trans-arrow { padding-top: 0; transform: rotate(90deg); }
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎓 Traducción de Modelos ER a Tablas Relacionales</h1>
-            <p class="subtitle">Objeto Virtual de Aprendizaje Interactivo - Universidad de Córdoba</p>
-        </header>
 
-        <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showTab('intro', this)">📚 Introducción</button>
-            <button class="nav-tab" onclick="showTab('conceptos', this)">🔑 Conceptos Clave</button>
-            <button class="nav-tab" onclick="showTab('reglas', this)">📋 Reglas de Traducción</button>
-            <button class="nav-tab" onclick="showTab('ejemplos', this)">💡 Ejemplos Interactivos</button>
-            <button class="nav-tab" onclick="showTab('taller', this)">✍️ Taller Práctico</button>
-            <button class="nav-tab" onclick="showTab('evaluacion', this)">✅ Evaluación</button>
-        </div>
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Objeto Virtual de Aprendizaje</div>
+  <h1>Traducción de Modelos ER<br>al Esquema Relacional</h1>
+  <p>Diseño de Bases de Datos · Ingeniería de Sistemas · UNICORDOBA</p>
+  <p>Ingeniero Alexander Fernandez-Arango Mg.S.I.</p>
+  <div class="hero-meta">
+    <span>📘 6 módulos</span>
+    <span>🧩 Ejemplos interactivos</span>
+    <span>📝 Autoevaluación</span>
+    <span>🗺️ Cuadro operacional</span>
+  </div>
+</div>
 
-        <div class="content">
-            <div id="intro" class="tab-content active">
-                <h2>🎯 Objetivos de Aprendizaje</h2>
-                <div class="card">
-                    <ul style="line-height: 2; list-style-position: inside;">
-                        <li>✓ Comprender el proceso de traducción de un diagrama ER a un esquema relacional</li>
-                        <li>✓ Aplicar las reglas de conversión de entidades, relaciones, atributos y claves</li>
-                        <li>✓ Diferenciar entre la intención y la extensión de una relación</li>
-                        <li>✓ Identificar claves primarias y foráneas durante el modelado</li>
-                    </ul>
-                </div>
+<!-- NAVEGACIÓN -->
+<nav class="nav-tabs" id="mainNav">
+  <div class="nav-tab active" data-section="s0">🏠 Introducción</div>
+  <div class="nav-tab" data-section="s1">📐 Intención y Extensión</div>
+  <div class="nav-tab" data-section="s2">🧱 Entidades y Atributos</div>
+  <div class="nav-tab" data-section="s3">🔗 Relaciones</div>
+  <div class="nav-tab" data-section="s4">🔑 Dominio y Llaves</div>
+  <div class="nav-tab" data-section="s5">🗺️ Operacionalización</div>
+  <div class="nav-tab" data-section="s6">✅ Autoevaluación</div>
+</nav>
 
-                <div class="concept-box">
-                    <h3>¿Por qué es importante esta traducción?</h3>
-                    <p>El modelo Entidad-Relación (ER) es una representación conceptual abstracta que nos ayuda a diseñar bases de datos. Sin embargo, los sistemas de gestión de bases de datos (SGBD) trabajan con el modelo relacional (tablas). Por eso necesitamos traducir nuestros diseños ER a estructuras relacionales.</p>
-                </div>
+<div class="container">
 
-                <h3 style="margin-top: 30px;">📊 Proceso de Traducción</h3>
-                <div class="step-indicator">
-                    <div class="step completed">
-                        <strong>1. Análisis</strong>
-                        <p>Identificar entidades y relaciones</p>
-                    </div>
-                    <div class="step completed">
-                        <strong>2. Aplicar Reglas</strong>
-                        <p>Convertir según tipo</p>
-                    </div>
-                    <div class="step completed">
-                        <strong>3. Definir Claves</strong>
-                        <p>PK y FK</p>
-                    </div>
-                    <div class="step completed">
-                        <strong>4. Validar</strong>
-                        <p>Integridad y consistencia</p>
-                    </div>
-                </div>
+<!-- ════════════════════════════════════════════
+     SECCIÓN 0 – INTRODUCCIÓN
+════════════════════════════════════════════ -->
+<section class="section active" id="s0">
+  <div class="card">
+    <div class="card-title"><div class="icon">🎯</div> Objetivos de aprendizaje</div>
+    <div class="ciclo-steps">
+      <div class="ciclo-step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>Comprender el proceso de traducción ER → Relacional</h4><p>Identificar las reglas que transforman el esquema conceptual en un esquema implementable.</p></div>
+      </div>
+      <div class="ciclo-step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Diferenciar intención y extensión</h4><p>Distinguir entre la descripción estructural de una relación y sus datos reales en un momento dado.</p></div>
+      </div>
+      <div class="ciclo-step">
+        <div class="step-num">3</div>
+        <div class="step-content"><h4>Aplicar reglas de conversión</h4><p>Traducir entidades fuertes, débiles, atributos compuestos, multivalorados y relaciones (1:1, 1:N, N:M).</p></div>
+      </div>
+      <div class="ciclo-step">
+        <div class="step-num">4</div>
+        <div class="step-content"><h4>Identificar dominio, claves primarias y foráneas</h4><p>Definir restricciones de integridad y tipos de datos válidos para cada atributo.</p></div>
+      </div>
+    </div>
+  </div>
 
-                <div class="info-box">
-                    <strong>💡 Tip Pedagógico:</strong> Piensa en el modelo ER como un plano arquitectónico y el modelo relacional como la construcción real. Ambos representan lo mismo, pero en diferentes niveles de abstracción.
-                </div>
-            </div>
+  <div class="card">
+    <div class="card-title"><div class="icon">🔄</div> Ciclo de diseño de una base de datos</div>
+    <p style="font-size:.9rem;color:var(--gris-medio);margin-bottom:1.2rem;">La traducción de modelos ER es la etapa central del ciclo de vida. Ubiquemos el proceso:</p>
+    <div class="er-wrap">
+      <svg class="er-svg" viewBox="0 0 760 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#2d7a4f"/>
+          </marker>
+        </defs>
+        <!-- Cajas -->
+        <rect x="10" y="30" width="150" height="60" rx="10" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="1.5"/>
+        <text x="85" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="#1a4d32">Diseño</text>
+        <text x="85" y="72" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#2d7a4f">Conceptual (ER)</text>
+        <text x="85" y="107" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#888">Esquema ER</text>
 
-            <div id="conceptos" class="tab-content">
-                <h2>🔑 Conceptos Fundamentales</h2>
+        <rect x="205" y="30" width="150" height="60" rx="10" fill="#2d7a4f" stroke="#1a4d32" stroke-width="1.5"/>
+        <text x="280" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="white">Diseño Lógico</text>
+        <text x="280" y="72" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#a8d8a8">(Traducción ER)</text>
+        <rect x="205" y="90" width="150" height="16" rx="4" fill="#f0a500"/>
+        <text x="280" y="102" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" font-weight="700" fill="white">★ TEMA CENTRAL</text>
 
-                <div class="card">
-                    <h4>📝 Intención de una Relación</h4>
-                    <p><strong>Definición:</strong> Es la descripción general, la estructura o esquema de la relación. Define QUÉ tipo de información se almacena.</p>
-                    <div class="info-box">
-                        <strong>Ejemplo:</strong> La relación <em>Matrícula</em> conecta a <em>Estudiantes</em> con <em>Cursos</em>. Esto es la intención: definir que existe esta conexión y qué significa.
-                    </div>
-                </div>
+        <rect x="400" y="30" width="150" height="60" rx="10" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="1.5"/>
+        <text x="475" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="#1a4d32">Diseño Físico</text>
+        <text x="475" y="72" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#2d7a4f">Índices y SGBD</text>
+        <text x="475" y="107" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#888">Esquema físico</text>
 
-                <div class="card">
-                    <h4>📊 Extensión de una Relación</h4>
-                    <p><strong>Definición:</strong> Son los datos reales, las instancias concretas. Representa CUÁLES son los datos específicos en un momento dado.</p>
-                    <div class="interactive-example">
-                        <p><strong>Ejemplo Interactivo:</strong></p>
-                        <button onclick="toggleExtension()">Ver Ejemplo de Extensión</button>
-                        <div id="extensionExample" style="display: none; margin-top: 15px;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #667eea; color: white;">
-                                        <th style="padding: 10px; border: 1px solid #ddd;">ID_Estudiante</th>
-                                        <th style="padding: 10px; border: 1px solid #ddd;">Código_Curso</th>
-                                        <th style="padding: 10px; border: 1px solid #ddd;">Fecha_Inscripción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">1001</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">MAT101</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">2025-01-15</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">1002</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">FIS201</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">2025-01-16</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">1001</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">QUI150</td>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">2025-01-17</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <p style="margin-top: 10px;"><em>Estas tuplas representan la extensión: los datos reales de estudiantes matriculados.</em></p>
-                        </div>
-                    </div>
-                </div>
+        <rect x="595" y="30" width="150" height="60" rx="10" fill="#e8f0fe" stroke="#5a7ecf" stroke-width="1.5"/>
+        <text x="670" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="#1a4cad">Implementación</text>
+        <text x="670" y="72" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#1a4cad">SQL / SGBD</text>
 
-                <div class="concept-box">
-                    <h3>🔐 Claves en el Modelo Relacional</h3>
-                    <p><strong>Clave Primaria (PK):</strong> Identifica únicamente cada registro en una tabla. No puede ser nula ni repetirse.</p>
-                    <p style="margin-top: 10px;"><strong>Clave Foránea (FK):</strong> Es un atributo que referencia la clave primaria de otra tabla, estableciendo relaciones entre tablas.</p>
-                </div>
+        <!-- Flechas -->
+        <line x1="160" y1="60" x2="202" y2="60" stroke="#2d7a4f" stroke-width="2" marker-end="url(#arr)"/>
+        <line x1="355" y1="60" x2="397" y2="60" stroke="#2d7a4f" stroke-width="2" marker-end="url(#arr)"/>
+        <line x1="550" y1="60" x2="592" y2="60" stroke="#2d7a4f" stroke-width="2" marker-end="url(#arr)"/>
+      </svg>
+    </div>
+  </div>
 
-                <div class="warning-box">
-                    <strong>⚠️ Importante:</strong> La intención es estática (no cambia la estructura), pero la extensión es dinámica (los datos cambian constantemente con inserciones, actualizaciones y eliminaciones).
-                </div>
-            </div>
+  <div class="card">
+    <div class="card-title"><div class="icon">💡</div> ¿Por qué es importante esta traducción?</div>
+    <div class="map-grid">
+      <div class="map-card m-verde">
+        <h4>🏗️ Estructurada</h4>
+        <ul><li>Define tablas con precisión</li><li>Establece relaciones explícitas</li><li>Garantiza coherencia</li></ul>
+      </div>
+      <div class="map-card m-azul">
+        <h4>🔒 Íntegra</h4>
+        <ul><li>Aplica claves primarias</li><li>Define claves foráneas</li><li>Valida dominios de datos</li></ul>
+      </div>
+      <div class="map-card m-naranja">
+        <h4>⚡ Eficiente</h4>
+        <ul><li>Reduce redundancia</li><li>Minimiza anomalías</li><li>Prepara para normalización</li></ul>
+      </div>
+      <div class="map-card m-rojo">
+        <h4>🔄 Implementable</h4>
+        <ul><li>Compatible con SGBD</li><li>Convertible a SQL DDL</li><li>Base para el diseño físico</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
 
-            <div id="reglas" class="tab-content">
-                <h2>📋 Reglas de Traducción ER → Relacional</h2>
+<!-- ════════════════════════════════════════════
+     SECCIÓN 1 – INTENCIÓN Y EXTENSIÓN
+════════════════════════════════════════════ -->
+<section class="section" id="s1">
+  <div class="card">
+    <div class="card-title"><div class="icon">📐</div> Intención vs. Extensión de una Relación</div>
 
-                <div class="card">
-                    <h4>1️⃣ Entidades Fuertes</h4>
-                    <p><strong>Regla:</strong> Cada entidad fuerte se convierte en una tabla.</p>
-                    <ul style="margin: 10px 0 10px 20px; line-height: 1.8;">
-                        <li>Los atributos simples → columnas de la tabla</li>
-                        <li>La clave primaria del ER → clave primaria (PK) de la tabla</li>
-                    </ul>
-                    <div class="interactive-example">
-                        <strong>Ejemplo:</strong>
-                        <div class="er-diagram">
-                            <div class="entity">ESTUDIANTE<br><small><u>Matrícula</u>, Nombre, Email</small></div>
-                        </div>
-                        <div style="text-align: center; font-size: 2em; margin: 10px 0;">⬇️</div>
-                        <div class="code-block">
-ESTUDIANTE(<span style="color: #ffc107;">Matrícula</span> PRIMARY KEY, Nombre, Email)
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h4>2️⃣ Atributos Compuestos</h4>
-                    <p><strong>Regla:</strong> Se dividen en sus componentes atómicos.</p>
-                    <div class="interactive-example">
-                        <button onclick="showComposite()">Ver Ejemplo</button>
-                        <div id="compositeExample" style="display: none; margin-top: 15px;">
-                            <p><strong>Antes:</strong> Dirección (Calle, Ciudad, Código_Postal)</p>
-                            <p><strong>Después:</strong> Se crean columnas separadas para cada componente.</p>
-                            <div class="code-block">
-CLIENTE(ID_Cliente PRIMARY KEY, <span style="color: #50fa7b;">Calle, Ciudad, Código_Postal</span>)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h4>3️⃣ Atributos Multivaluados</h4>
-                    <p><strong>Regla:</strong> Se crea una nueva tabla con clave foránea que referencia la entidad original.</p>
-                    <div class="interactive-example">
-                        <strong>Ejemplo: Teléfonos de un Estudiante</strong>
-                        <div class="code-block">
-ESTUDIANTE(<span style="color: #ffc107;">Matrícula</span> PRIMARY KEY, Nombre, Email)
-<br>
-TELEFONO(<span style="color: #17a2b8;">Matrícula_Est</span>, Teléfono, 
-         PRIMARY KEY(Matrícula_Est, Teléfono),
-         FOREIGN KEY(Matrícula_Est) REFERENCES ESTUDIANTE(Matrícula))
-                        </div>
-                        <p style="margin-top: 10px;"><em>Un estudiante puede tener múltiples teléfonos, cada uno en un registro separado en la tabla TELEFONO.</em></p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h4>4️⃣ Entidades Débiles</h4>
-                    <p><strong>Regla:</strong> Se convierten en tabla con clave parcial + clave primaria de la entidad fuerte como clave primaria compuesta.</p>
-                    <div class="interactive-example">
-                        <strong>Ejemplo: Facturas de un Cliente</strong>
-                        <div class="code-block">
-CLIENTE(<span style="color: #ffc107;">ID_Cliente</span> PRIMARY KEY, Nombre, Dirección)
-<br>
-FACTURA(<span style="color: #17a2b8;">ID_Cliente</span>, <span style="color: #ffc107;">Num_Factura</span>, Fecha, Monto, 
-        PRIMARY KEY(ID_Cliente, Num_Factura),
-        FOREIGN KEY(ID_Cliente) REFERENCES CLIENTE)
-                        </div>
-                        <p style="margin-top: 10px;"><em>La factura depende del cliente para existir. Su clave es compuesta.</em></p>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px;">🔗 Traducción de Relaciones</h3>
-
-                <div class="card">
-                    <h4>5️⃣ Relaciones 1:1 (Uno a Uno)</h4>
-                    <p><strong>Regla:</strong> Agregar clave foránea en cualquiera de las dos tablas (preferiblemente en la de participación total).</p>
-                    <div class="interactive-example">
-                        <strong>Ejemplo: Persona - Pasaporte</strong>
-                        <div class="code-block">
-PERSONA(<span style="color: #ffc107;">DNI</span> PRIMARY KEY, Nombre, Fecha_Nac)
-<br>
-PASAPORTE(<span style="color: #ffc107;">Num_Pasaporte</span> PRIMARY KEY, Fecha_Expedición,
-          <span style="color: #17a2b8;">DNI_Persona</span> UNIQUE,
-          FOREIGN KEY(DNI_Persona) REFERENCES PERSONA(DNI))
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h4>6️⃣ Relaciones 1:N (Uno a Muchos)</h4>
-                    <p><strong>Regla:</strong> Agregar clave foránea en la tabla del lado "muchos".</p>
-                    <div class="interactive-example">
-                        <strong>Ejemplo: Profesor - Curso</strong>
-                        <div class="code-block">
-PROFESOR(<span style="color: #ffc107;">ID_Profesor</span> PRIMARY KEY, Nombre, Especialidad)
-<br>
-CURSO(<span style="color: #ffc107;">ID_Curso</span> PRIMARY KEY, Nombre_Curso, 
-      <span style="color: #17a2b8;">ID_Profesor_FK</span>,
-      FOREIGN KEY(ID_Profesor_FK) REFERENCES PROFESOR(ID_Profesor))
-                        </div>
-                        <p style="margin-top: 10px;"><em>Un profesor puede dictar muchos cursos, pero cada curso tiene un solo profesor.</em></p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h4>7️⃣ Relaciones N:M (Muchos a Muchos)</h4>
-                    <p><strong>Regla:</strong> Crear una nueva tabla intermedia con las claves foráneas de ambas entidades como clave primaria compuesta.</p>
-                    <div class="interactive-example">
-                        <strong>Ejemplo: Estudiante - Curso</strong>
-                        <div class="code-block">
-ESTUDIANTE(<span style="color: #ffc107;">Matrícula</span> PRIMARY KEY, Nombre, Email)
-<br>
-CURSO(<span style="color: #ffc107;">Código_Curso</span> PRIMARY KEY, Nombre_Curso, Créditos)
-<br>
-INSCRIPCION(<span style="color: #17a2b8;">Matrícula_Est</span>, <span style="color: #17a2b8;">Código_Curso_FK</span>, Fecha_Inscripción, Nota,
-            PRIMARY KEY(Matrícula_Est, Código_Curso_FK),
-            FOREIGN KEY(Matrícula_Est) REFERENCES ESTUDIANTE(Matrícula),
-            FOREIGN KEY(Código_Curso_FK) REFERENCES CURSO(Código_Curso))
-                        </div>
-                        <p style="margin-top: 10px;"><em>Un estudiante se inscribe en muchos cursos y un curso tiene muchos estudiantes.</em></p>
-                    </div>
-                </div>
-
-                <div class="success-box">
-                    <strong>✅ Resumen Mnemotécnico:</strong>
-                    <ul style="margin-top: 10px; line-height: 1.8;">
-                        <li><strong>1:1</strong> → FK en cualquier lado (usualmente con restricción UNIQUE).</li>
-                        <li><strong>1:N</strong> → FK en el lado "N" (muchos).</li>
-                        <li><strong>N:M</strong> → Nueva tabla intermedia.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div id="ejemplos" class="tab-content">
-                <h2>💡 Ejemplos Paso a Paso</h2>
-
-                <div class="card">
-                    <h4>Ejemplo 1: Sistema de Biblioteca 📚</h4>
-                    <p><strong>Descripción:</strong> Un autor puede escribir muchos libros, y un libro puede ser escrito por muchos autores.</p>
-                    <button id="btnExample1" onclick="showExample1Step()">Iniciar Traducción</button>
-                    <div id="example1Container" style="margin-top: 20px;"></div>
-                </div>
-
-                <div class="card">
-                    <h4>Ejemplo 2: Sistema Universitario 🎓</h4>
-                    <p><strong>Descripción:</strong> Un departamento tiene muchos profesores, pero cada profesor pertenece a un solo departamento.</p>
-                    <button id="btnExample2" onclick="showExample2Step()">Iniciar Traducción</button>
-                    <div id="example2Container" style="margin-top: 20px;"></div>
-                </div>
-
-                <div class="card">
-                    <h4>Ejemplo 3: Red Social Simplificada 👥</h4>
-                    <p><strong>Descripción:</strong> Un usuario puede seguir a muchos otros usuarios, y a su vez, ser seguido por muchos.</p>
-                    <button onclick="showExample3()">Ver Traducción Completa</button>
-                    <div id="example3Container" style="margin-top: 20px; display: none;"></div>
-                </div>
-            </div>
-
-            <div id="taller" class="tab-content">
-                <h2>✍️ Taller Práctico</h2>
-                
-                <div class="concept-box">
-                    <h3>Instrucciones</h3>
-                    <p>Completa los siguientes ejercicios aplicando las reglas de traducción aprendidas. El sistema validará tus respuestas.</p>
-                </div>
-
-                <div class="card">
-                    <h4>Ejercicio 1: Hospital 🏥</h4>
-                    <p><strong>Contexto:</strong> Un hospital tiene médicos y pacientes. Un médico atiende a muchos pacientes y un paciente puede ser atendido por muchos médicos. Cada consulta que relaciona a un médico y un paciente tiene una fecha y un diagnóstico.</p>
-                    
-                    <div class="workshop-area">
-                        <p><strong>Paso 1:</strong> Identifica las entidades principales (fuertes)</p>
-                        <input type="text" class="workshop-input" id="hospital-entities" placeholder="Escribe las entidades separadas por comas. Ej: Entidad1, Entidad2">
-                        
-                        <p style="margin-top: 15px;"><strong>Paso 2:</strong> ¿Qué tipo de relación cardinalidad existe entre ellas? (1:1, 1:N, N:M)</p>
-                        <select class="workshop-input" id="hospital-relation">
-                            <option value="">Selecciona...</option>
-                            <option value="1:1">1:1 (Uno a Uno)</option>
-                            <option value="1:N">1:N (Uno a Muchos)</option>
-                            <option value="N:M">N:M (Muchos a Muchos)</option>
-                        </select>
-                        
-                        <p style="margin-top: 15px;"><strong>Paso 3:</strong> ¿Cómo traducirías esta relación?</p>
-                        <select class="workshop-input" id="hospital-translation">
-                            <option value="">Selecciona...</option>
-                            <option value="fk">Añadiendo una clave foránea en una de las entidades.</option>
-                            <option value="new_table">Creando una nueva tabla intermedia.</option>
-                        </select>
-                        
-                        <button onclick="checkHospitalExercise()">Verificar Respuestas</button>
-                        <div id="hospital-feedback"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="evaluacion" class="tab-content">
-                 <h2>✅ Evaluación de Conocimientos</h2>
-                 <div class="card">
-                    <h4>Pregunta 1</h4>
-                    <p>En un modelo ER, tenemos una entidad "Empleado" y una entidad "Departamento". La relación es que "un empleado trabaja en un solo departamento, pero un departamento tiene muchos empleados". ¿Cuál es la forma correcta de traducir esto al modelo relacional?</p>
-                    <div id="quiz-options">
-                        <div class="quiz-option" onclick="checkQuizAnswer(this, false)">A) Crear una tabla intermedia "TRABAJA_EN" con las claves de Empleado y Departamento.</div>
-                        <div class="quiz-option" onclick="checkQuizAnswer(this, true)">B) Añadir la clave primaria de Departamento como clave foránea en la tabla Empleado.</div>
-                        <div class="quiz-option" onclick="checkQuizAnswer(this, false)">C) Añadir la clave primaria de Empleado como clave foránea en la tabla Departamento.</div>
-                        <div class="quiz-option" onclick="checkQuizAnswer(this, false)">D) Fusionar ambas entidades en una sola tabla.</div>
-                    </div>
-                    <div id="quiz-feedback" class="info-box" style="display:none; margin-top:20px;"></div>
-                 </div>
-            </div>
-        </div>
+    <div class="inner-tabs">
+      <div class="inner-tab active" data-panel="p-intencion">Intención</div>
+      <div class="inner-tab" data-panel="p-extension">Extensión</div>
+      <div class="inner-tab" data-panel="p-comparacion">Comparación</div>
     </div>
 
-    <script>
-        // --- LÓGICA DE NAVEGACIÓN POR PESTAÑAS ---
-        function showTab(tabId, element) {
-            // Ocultar todos los contenidos
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-            });
+    <div class="inner-panel active" id="p-intencion">
+      <div class="def-box">
+        <div class="term">Intención (Intensión) de una Relación</div>
+        <p>Es la <strong>descripción estructural</strong> de la relación: su nombre, los nombres de sus atributos, los dominios asociados y las restricciones de integridad. Corresponde al <em>esquema</em> de la tabla — no cambia con el tiempo ordinariamente.</p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Intención de CURSO</div>
+        <div class="code-block">
+<span class="kw">CURSO</span> ( CodCurso: <span class="str">Códigos</span>, Nombre: <span class="str">Nombres</span>, NHoras: <span class="str">Horas</span>, Materia: <span class="str">Materias</span> )
+        </div>
+        <p style="font-size:.87rem;color:var(--gris-medio);margin-top:.5rem;">Formato: <code>Relación ( Atributo₁: Dominio₁, Atributo₂: Dominio₂, … Atributoₙ: Dominioₙ )</code></p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Intención de ESTUDIANTE</div>
+        <div class="code-block">
+<span class="kw">ESTUDIANTE</span> ( <span class="pk">Matricula PRIMARY KEY</span>, Nombre, Apellido, Email )
+        </div>
+      </div>
+    </div>
 
-            // Desactivar todas las pestañas
-            const navTabs = document.querySelectorAll('.nav-tab');
-            navTabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
+    <div class="inner-panel" id="p-extension">
+      <div class="def-box">
+        <div class="term">Extensión de una Relación</div>
+        <p>Es el <strong>conjunto de tuplas</strong> (registros/filas) que contiene la relación en un <em>instante determinado</em>. Representa los datos reales almacenados. Cambia con cada operación INSERT, UPDATE o DELETE.</p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Extensión de CURSO (tabla real con datos)</div>
+        <table class="rel-table">
+          <thead><tr><th>COD</th><th>NOMBRE</th><th>EXISTENCIA</th><th>UBICACIÓN</th></tr></thead>
+          <tbody>
+            <tr><td class="pk">00001</td><td>CPU INTEL</td><td>20</td><td>BODEGA 1A</td></tr>
+            <tr><td class="pk">00003</td><td>GPU NVIDIA</td><td>15</td><td>BODEGA 1G</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.84rem;color:var(--gris-medio);margin-top:.5rem;">Cada fila = una <strong>tupla</strong>. El número de columnas = <strong>grado</strong>. El número de filas = <strong>cardinalidad</strong>.</p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Extensión de MATRICULA</div>
+        <table class="rel-table">
+          <thead><tr><th>ID_Estudiante</th><th>Cod_Curso</th><th>Fecha</th></tr></thead>
+          <tbody>
+            <tr><td class="fk">1001</td><td class="fk">MAT101</td><td>2024-02-10</td></tr>
+            <tr><td class="fk">1002</td><td class="fk">MAT101</td><td>2024-02-11</td></tr>
+            <tr><td class="fk">1001</td><td class="fk">FIS201</td><td>2024-02-12</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-            // Mostrar el contenido de la pestaña seleccionada
-            const selectedTab = document.getElementById(tabId);
-            selectedTab.classList.add('active');
+    <div class="inner-panel" id="p-comparacion">
+      <table class="rel-table">
+        <thead><tr><th>Aspecto</th><th>Intención</th><th>Extensión</th></tr></thead>
+        <tbody>
+          <tr><td><strong>¿Qué es?</strong></td><td>Esquema / estructura</td><td>Datos reales / instancia</td></tr>
+          <tr><td><strong>¿Cambia?</strong></td><td>Raramente (ALTER TABLE)</td><td>Constantemente (DML)</td></tr>
+          <tr><td><strong>Contiene</strong></td><td>Nombres, dominios, restricciones</td><td>Tuplas con valores reales</td></tr>
+          <tr><td><strong>Equivalente SQL</strong></td><td>CREATE TABLE</td><td>SELECT * FROM tabla</td></tr>
+          <tr><td><strong>Analogía</strong></td><td>Molde / plantilla</td><td>Objetos fabricados con ese molde</td></tr>
+        </tbody>
+      </table>
+      <div class="def-box" style="margin-top:1rem;">
+        <div class="term">Grado de una relación</div>
+        <p>Número de atributos (columnas) que tiene la relación. En el ejemplo CURSO con atributos COD, NOMBRE, EXISTENCIA, UBICACIÓN → Grado = 4.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-            // Activar la pestaña clickeada
-            element.classList.add('active');
-        }
+<!-- ════════════════════════════════════════════
+     SECCIÓN 2 – ENTIDADES Y ATRIBUTOS
+════════════════════════════════════════════ -->
+<section class="section" id="s2">
+  <div class="card">
+    <div class="card-title"><div class="icon">🧱</div> Tipos de Entidades y sus Reglas de Traducción</div>
 
-        // --- LÓGICA PARA "CONCEPTOS CLAVE" ---
-        function toggleExtension() {
-            const example = document.getElementById('extensionExample');
-            example.style.display = example.style.display === 'none' ? 'block' : 'none';
-        }
+    <div class="inner-tabs">
+      <div class="inner-tab active" data-panel="pe-fuertes">Entidades Fuertes</div>
+      <div class="inner-tab" data-panel="pe-debiles">Entidades Débiles</div>
+      <div class="inner-tab" data-panel="pe-atribs">Tipos de Atributos</div>
+      <div class="inner-tab" data-panel="pe-demo">Demo Interactiva</div>
+    </div>
 
-        // --- LÓGICA PARA "REGLAS DE TRADUCCIÓN" ---
-        function showComposite() {
-            const example = document.getElementById('compositeExample');
-            example.style.display = example.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        // --- LÓGICA PARA "EJEMPLOS INTERACTIVOS" ---
+    <div class="inner-panel active" id="pe-fuertes">
+      <div class="def-box">
+        <div class="term">Entidad Fuerte</div>
+        <p>Es aquella que tiene existencia propia e independiente. Posee una <strong>clave primaria</strong> propia que la identifica unívocamente, sin depender de otra entidad.</p>
+      </div>
+      <h4 style="margin:.8rem 0 .4rem;color:var(--verde-oscuro);">Regla de traducción:</h4>
+      <ol style="padding-left:1.3rem;font-size:.9rem;line-height:2;">
+        <li>Se convierte en una <strong>tabla relacional</strong>.</li>
+        <li>Cada atributo simple se convierte en una <strong>columna</strong>.</li>
+        <li>La clave del ER se convierte en la <strong>PRIMARY KEY</strong>.</li>
+      </ol>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo – Sistema Universitario</div>
+        <div class="code-block">
+<span class="cm">-- Entidad ER: ESTUDIANTE (Matricula, Nombre, Email)</span>
+<span class="kw">CREATE TABLE</span> ESTUDIANTE (
+  <span class="pk">Matricula    VARCHAR(10)  PRIMARY KEY</span>,
+  Nombre       VARCHAR(80)  NOT NULL,
+  Email        VARCHAR(120)
+);
 
-        // Ejemplo 1: Biblioteca (N:M)
-        let example1CurrentStep = 0;
-        const example1Steps = [
-            `<h4>Paso 1: Identificar Entidades y Relación</h4>
-             <div class="info-box">Las entidades son <strong>AUTOR</strong> y <strong>LIBRO</strong>. La relación "Escribe" es <strong>Muchos a Muchos (N:M)</strong>.</div>
-             <div class="er-diagram">
-                <div class="entity">AUTOR</div>
-                <div class="relationship">Escribe</div>
-                <div class="entity">LIBRO</div>
-             </div>`,
-            `<h4>Paso 2: Traducir las Entidades Fuertes</h4>
-             <div class="info-box">Cada entidad se convierte en una tabla con su clave primaria.</div>
-             <div class="code-block">
-AUTOR(<span class="pk">ID_Autor</span>, Nombre, Nacionalidad)
-LIBRO(<span class="pk">ISBN</span>, Titulo, AñoPublicacion)
-             </div>`,
-            `<h4>Paso 3: Traducir la Relación N:M</h4>
-             <div class="success-box">Se crea una nueva tabla intermedia (AUTOR_LIBRO) que contiene las claves foráneas de ambas tablas. Estas dos claves forman una clave primaria compuesta.</div>
-             <div class="code-block">
-AUTOR_LIBRO(<span class="fk">ID_Autor_FK</span>, <span class="fk">ISBN_FK</span>,
-            PRIMARY KEY(ID_Autor_FK, ISBN_FK),
-            FOREIGN KEY(ID_Autor_FK) REFERENCES AUTOR(ID_Autor),
-            FOREIGN KEY(ISBN_FK) REFERENCES LIBRO(ISBN))
-             </div>`,
-             `<h4>Resultado Final</h4>
-              <div class="table-result">
-                <h5>Tabla AUTOR</h5>
-                <p>AUTOR(<u>ID_Autor</u>, Nombre, Nacionalidad)</p>
-                <h5 style="margin-top:10px;">Tabla LIBRO</h5>
-                <p>LIBRO(<u>ISBN</u>, Titulo, AñoPublicacion)</p>
-                <h5 style="margin-top:10px;">Tabla AUTOR_LIBRO</h5>
-                <p>AUTOR_LIBRO(<u>ID_Autor_FK</u>, <u>ISBN_FK</u>)</p>
-              </div>`
-        ];
+<span class="cm">-- Entidad ER: CURSO (Codigo_Curso, Nombre_Curso, NHoras)</span>
+<span class="kw">CREATE TABLE</span> CURSO (
+  <span class="pk">Codigo_Curso  VARCHAR(10)  PRIMARY KEY</span>,
+  Nombre_Curso  VARCHAR(100) NOT NULL,
+  NHoras        INT
+);
+        </div>
+      </div>
+    </div>
 
-        function showExample1Step() {
-            const container = document.getElementById('example1Container');
-            const button = document.getElementById('btnExample1');
-            if (example1CurrentStep < example1Steps.length) {
-                container.innerHTML += example1Steps[example1CurrentStep];
-                example1CurrentStep++;
-                button.textContent = example1CurrentStep === example1Steps.length ? 'Traducción Completa' : `Siguiente Paso (${example1CurrentStep}/${example1Steps.length-1})`;
-            }
-            if (example1CurrentStep === example1Steps.length) {
-                button.disabled = true;
-            }
-        }
-        
-        // Ejemplo 2: Universidad (1:N)
-        let example2CurrentStep = 0;
-        const example2Steps = [
-            `<h4>Paso 1: Identificar Entidades y Relación</h4>
-             <div class="info-box">Las entidades son <strong>DEPARTAMENTO</strong> y <strong>PROFESOR</strong>. La relación "Pertenece" es <strong>Uno a Muchos (1:N)</strong>. Un departamento tiene N profesores, un profesor pertenece a 1 departamento.</div>`,
-            `<h4>Paso 2: Traducir las Entidades</h4>
-             <div class="code-block">
-DEPARTAMENTO(<span class="pk">ID_Depto</span>, NombreDepto, Edificio)
-PROFESOR(<span class="pk">ID_Profesor</span>, Nombre, Apellido, Oficina)
-             </div>`,
-            `<h4>Paso 3: Traducir la Relación 1:N</h4>
-             <div class="success-box">Se aplica la regla: la clave primaria del lado "1" (DEPARTAMENTO) se añade como clave foránea en la tabla del lado "N" (PROFESOR).</div>
-             <div class="code-block">
-PROFESOR(<span class="pk">ID_Profesor</span>, Nombre, Apellido, Oficina, <span class="fk">ID_Depto_FK</span>,
-         FOREIGN KEY(ID_Depto_FK) REFERENCES DEPARTAMENTO(ID_Depto))
-             </div>`,
-             `<h4>Resultado Final</h4>
-              <div class="table-result">
-                <h5>Tabla DEPARTAMENTO</h5>
-                <p>DEPARTAMENTO(<u>ID_Depto</u>, NombreDepto, Edificio)</p>
-                <h5 style="margin-top:10px;">Tabla PROFESOR</h5>
-                <p>PROFESOR(<u>ID_Profesor</u>, Nombre, Apellido, Oficina, <i>ID_Depto_FK</i>)</p>
-              </div>`
-        ];
+    <div class="inner-panel" id="pe-debiles">
+      <div class="def-box">
+        <div class="term">Entidad Débil</div>
+        <p>Es aquella que <strong>no posee clave primaria propia</strong>. Su existencia depende de una entidad fuerte (entidad propietaria). Se identifica mediante una <em>clave parcial</em> combinada con la clave de la entidad fuerte.</p>
+      </div>
+      <h4 style="margin:.8rem 0 .4rem;color:var(--verde-oscuro);">Regla de traducción:</h4>
+      <ol style="padding-left:1.3rem;font-size:.9rem;line-height:2;">
+        <li>Se convierte en tabla con <strong>clave parcial + PK de la entidad fuerte</strong>.</li>
+        <li>La <strong>combinación de ambas</strong> forma la PRIMARY KEY de la tabla resultante.</li>
+        <li>La clave foránea referencia a la entidad fuerte.</li>
+      </ol>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo – Factura depende de Cliente</div>
+        <div class="code-block">
+<span class="cm">-- Entidad fuerte: CLIENTE</span>
+<span class="kw">CREATE TABLE</span> CLIENTE (
+  <span class="pk">ID_Cliente   INT  PRIMARY KEY</span>,
+  Nombre       VARCHAR(100)
+);
 
-        function showExample2Step() {
-            const container = document.getElementById('example2Container');
-            const button = document.getElementById('btnExample2');
-            if (example2CurrentStep < example2Steps.length) {
-                container.innerHTML += example2Steps[example2CurrentStep];
-                example2CurrentStep++;
-                button.textContent = example2CurrentStep === example2Steps.length ? 'Traducción Completa' : `Siguiente Paso (${example2CurrentStep}/${example2Steps.length-1})`;
-            }
-            if (example2CurrentStep === example2Steps.length) {
-                button.disabled = true;
-            }
-        }
+<span class="cm">-- Entidad débil: FACTURA (clave parcial: Num_Factura)</span>
+<span class="kw">CREATE TABLE</span> FACTURA (
+  <span class="fk">ID_Cliente   INT  NOT NULL</span>,
+  <span class="pk">Num_Factura  INT  NOT NULL</span>,
+  Fecha        DATE,
+  <span class="pk">PRIMARY KEY (ID_Cliente, Num_Factura)</span>,
+  <span class="fk">FOREIGN KEY (ID_Cliente) REFERENCES CLIENTE(ID_Cliente)</span>
+);
+        </div>
+      </div>
+      <div class="def-box" style="margin-top:1rem;">
+        <div class="term">¿Cómo se reconoce en el diagrama ER?</div>
+        <p>La entidad débil se dibuja con un <strong>rectángulo de doble línea</strong>. La relación identificadora se dibuja con un <strong>rombo de doble línea</strong>.</p>
+      </div>
+    </div>
 
-        // Ejemplo 3: Red Social (Autoreferencia N:M)
-        function showExample3() {
-            const container = document.getElementById('example3Container');
-            container.style.display = 'block';
-            container.innerHTML = `
-                <h4>Análisis del Problema</h4>
-                <div class="info-box">Un usuario puede seguir a muchos, y ser seguido por muchos. Es una relación N:M de la entidad USUARIO consigo misma.</div>
-                <h4>Traducción</h4>
-                <div class="success-box">Creamos la tabla USUARIO. Luego, para la relación "Sigue", creamos una tabla intermedia (SEGUIDORES) con dos claves foráneas que apuntan a la tabla USUARIO.</div>
-                <div class="code-block">
--- Tabla de la entidad
-USUARIO(<span class="pk">ID_Usuario</span>, NombreUsuario, Email)
+    <div class="inner-panel" id="pe-atribs">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="acc-item">
+          <div class="acc-header" onclick="toggleAcc(this)">
+            🔵 Atributos Simples <span class="acc-arrow">▶</span>
+          </div>
+          <div class="acc-body">
+            <p>Son indivisibles. Se traducen directamente como <strong>columnas</strong> en la tabla.</p>
+            <div class="code-block"><span class="cm">-- Atributos simples de ESTUDIANTE</span>
+Matricula, Nombre, Email  →  <span class="kw">columnas directas</span></div>
+          </div>
+        </div>
+        <div class="acc-item">
+          <div class="acc-header" onclick="toggleAcc(this)">
+            🟡 Atributos Compuestos <span class="acc-arrow">▶</span>
+          </div>
+          <div class="acc-body">
+            <p>Pueden descomponerse en sub-atributos. Se traducen <strong>expandiendo cada componente</strong> como columna separada.</p>
+            <div class="code-block"><span class="cm">-- Nombre_Completo → descomponer en componentes</span>
+Nombre_Completo  →  Nombre, Apellido
+Domicilio        →  Calle, Numero, Ciudad
 
--- Tabla para la relación N:M
-SEGUIDORES(<span class="fk">ID_Seguidor</span>, <span class="fk">ID_Seguido</span>,
-           PRIMARY KEY(ID_Seguidor, ID_Seguido),
-           FOREIGN KEY(ID_Seguidor) REFERENCES USUARIO(ID_Usuario),
-           FOREIGN KEY(ID_Seguido) REFERENCES USUARIO(ID_Usuario))
-                </div>
-            `;
-        }
+<span class="cm">-- Resultado en la tabla:</span>
+ESTUDIANTE (<span class="pk">Matricula</span>, Nombre, Apellido, Calle, Numero, Ciudad, Email)</div>
+          </div>
+        </div>
+        <div class="acc-item">
+          <div class="acc-header" onclick="toggleAcc(this)">
+            🔴 Atributos Multivalorados <span class="acc-arrow">▶</span>
+          </div>
+          <div class="acc-body">
+            <p>Pueden tener múltiples valores para una misma entidad. Se traducen creando una <strong>nueva tabla separada</strong> con clave foránea.</p>
+            <div class="code-block"><span class="cm">-- Teléfonos del estudiante (puede tener varios)</span>
+<span class="kw">CREATE TABLE</span> TELEFONO (
+  <span class="fk">Matricula  VARCHAR(10)</span>,
+  Telefono   VARCHAR(15),
+  <span class="pk">PRIMARY KEY (Matricula, Telefono)</span>,
+  <span class="fk">FOREIGN KEY (Matricula) REFERENCES ESTUDIANTE(Matricula)</span>
+);</div>
+          </div>
+        </div>
+        <div class="acc-item">
+          <div class="acc-header" onclick="toggleAcc(this)">
+            🟢 Atributos Derivados <span class="acc-arrow">▶</span>
+          </div>
+          <div class="acc-body">
+            <p>Se calculan a partir de otros atributos. <strong>Generalmente no se almacenan</strong> en la tabla relacional; se calculan en las consultas.</p>
+            <div class="code-block"><span class="cm">-- Edad se calcula desde FechaNacimiento</span>
+<span class="cm">-- No crear columna Edad; usar función en SQL:</span>
+<span class="kw">SELECT</span> Nombre, DATEDIFF(NOW(), FechaNacimiento)/365 <span class="kw">AS</span> Edad
+<span class="kw">FROM</span> PERSONA;</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // --- LÓGICA PARA "TALLER PRÁCTICO" ---
-        function checkHospitalExercise() {
-            const entitiesInput = document.getElementById('hospital-entities').value.toLowerCase().trim();
-            const relationSelect = document.getElementById('hospital-relation').value;
-            const translationSelect = document.getElementById('hospital-translation').value;
-            const feedbackDiv = document.getElementById('hospital-feedback');
+    <div class="inner-panel" id="pe-demo">
+      <p style="font-size:.9rem;color:var(--gris-medio);margin-bottom:1rem;">Seleccione el tipo de entidad y vea la traducción automática al modelo relacional:</p>
+      <div class="inner-tabs" id="demoTabsEnt">
+        <div class="inner-tab active" data-demo="d-biblioteca">📚 Biblioteca</div>
+        <div class="inner-tab" data-demo="d-universidad">🎓 Universidad</div>
+        <div class="inner-tab" data-demo="d-empresa">🏢 Empresa</div>
+      </div>
+      <div id="demo-area-ent">
+        <!-- se llena con JS -->
+      </div>
+    </div>
+  </div>
+</section>
 
-            let correct = true;
-            let feedbackMessage = "";
+<!-- ════════════════════════════════════════════
+     SECCIÓN 3 – RELACIONES
+════════════════════════════════════════════ -->
+<section class="section" id="s3">
+  <div class="card">
+    <div class="card-title"><div class="icon">🔗</div> Tipos de Relaciones y su Traducción</div>
 
-            // Validar entidades
-            if (!(entitiesInput.includes('médico') && entitiesInput.includes('paciente')) && !(entitiesInput.includes('medico') && entitiesInput.includes('paciente'))) {
-                correct = false;
-                feedbackMessage += "Paso 1 incorrecto. Las entidades principales son Médico y Paciente. ";
-            }
+    <div class="inner-tabs">
+      <div class="inner-tab active" data-panel="pr-11">Relación 1:1</div>
+      <div class="inner-tab" data-panel="pr-1n">Relación 1:N</div>
+      <div class="inner-tab" data-panel="pr-nm">Relación N:M</div>
+      <div class="inner-tab" data-panel="pr-diagrama">Diagrama ER</div>
+    </div>
 
-            // Validar tipo de relación
-            if (relationSelect !== 'N:M') {
-                correct = false;
-                feedbackMessage += "Paso 2 incorrecto. La relación es Muchos a Muchos (N:M). ";
-            }
-            
-            // Validar traducción
-            if (translationSelect !== 'new_table') {
-                correct = false;
-                feedbackMessage += "Paso 3 incorrecto. Una relación N:M siempre se traduce creando una nueva tabla intermedia. ";
-            }
+    <div class="inner-panel active" id="pr-11">
+      <div class="def-box">
+        <div class="term">Relación Uno a Uno (1:1)</div>
+        <p>Una instancia de la entidad A se asocia con <strong>a lo sumo una</strong> instancia de la entidad B, y viceversa.</p>
+      </div>
+      <h4 style="margin:.7rem 0 .4rem;color:var(--verde-oscuro);">Regla de traducción:</h4>
+      <p style="font-size:.9rem;line-height:1.7;color:var(--gris-medio);">La clave foránea puede colocarse en <strong>cualquiera de las dos tablas</strong>. Se prefiere colocarla en la entidad con <em>participación total</em> (la que siempre tiene la relación).</p>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Persona y Pasaporte</div>
+        <div class="trans-demo">
+          <div class="trans-box">
+            <h5>Esquema ER</h5>
+            <p style="font-size:.85rem;">PERSONA ─(1:1)─ PASAPORTE</p>
+            <ul style="font-size:.82rem;padding-left:1.1rem;margin-top:.5rem;line-height:1.8;color:var(--gris-medio);">
+              <li>PERSONA (ID_Persona, Nombre)</li>
+              <li>PASAPORTE (Num_Pasaporte, Vencimiento)</li>
+            </ul>
+          </div>
+          <div class="trans-arrow">→</div>
+          <div class="trans-box trans-result">
+            <h5>Esquema Relacional</h5>
+            <div class="code-block" style="font-size:.78rem;">
+PERSONA (<span class="pk">ID_Persona PK</span>, Nombre)
+PASAPORTE (<span class="pk">Num_Pasaporte PK</span>,
+  <span class="fk">ID_Persona FK</span>, Vencimiento)</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            if (correct) {
-                feedbackDiv.className = 'success-box';
-                feedbackDiv.textContent = '¡Excelente! Todas tus respuestas son correctas. La relación N:M entre Médico y Paciente requiere una nueva tabla (ej. CONSULTA) con las claves foráneas de ambas.';
-            } else {
-                feedbackDiv.className = 'warning-box';
-                feedbackDiv.textContent = feedbackMessage;
-            }
-        }
+    <div class="inner-panel" id="pr-1n">
+      <div class="def-box">
+        <div class="term">Relación Uno a Muchos (1:N)</div>
+        <p>Una instancia de la entidad A se puede asociar con <strong>muchas</strong> instancias de B, pero cada instancia de B se asocia con <strong>a lo sumo una</strong> de A.</p>
+      </div>
+      <h4 style="margin:.7rem 0 .4rem;color:var(--verde-oscuro);">Regla de traducción:</h4>
+      <p style="font-size:.9rem;line-height:1.7;color:var(--gris-medio);">La clave foránea se coloca en la tabla del <strong>lado "muchos"</strong> (lado N), referenciando la clave primaria del lado "uno".</p>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Profesor dicta Cursos</div>
+        <div class="trans-demo">
+          <div class="trans-box">
+            <h5>Esquema ER</h5>
+            <p style="font-size:.85rem;">PROFESOR ─(1:N)─ CURSO</p>
+            <p style="font-size:.82rem;color:var(--gris-medio);margin-top:.4rem;">Un profesor dicta varios cursos, pero cada curso lo dicta un único profesor.</p>
+          </div>
+          <div class="trans-arrow">→</div>
+          <div class="trans-box trans-result">
+            <h5>Esquema Relacional</h5>
+            <div class="code-block" style="font-size:.78rem;">
+PROFESOR (<span class="pk">ID_Prof PK</span>, Nombre)
+CURSO (<span class="pk">Cod_Curso PK</span>,
+  Nombre_Curso,
+  <span class="fk">ID_Prof FK</span>  <span class="cm">-- lado N</span>
+)</div>
+          </div>
+        </div>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Departamento y Empleados</div>
+        <div class="code-block">
+DEPARTAMENTO (<span class="pk">ID_Depto PK</span>, Nombre, Presupuesto)
+EMPLEADO     (<span class="pk">ID_Empl  PK</span>, Nombre, Cargo, <span class="fk">ID_Depto FK</span>)
+        </div>
+      </div>
+    </div>
 
-        // --- LÓGICA PARA "EVALUACIÓN" ---
-        function checkQuizAnswer(selectedOption, isCorrect) {
-            const allOptions = document.querySelectorAll('.quiz-option');
-            const feedbackBox = document.getElementById('quiz-feedback');
-            
-            // Deshabilitar más clics
-            allOptions.forEach(option => {
-                option.style.pointerEvents = 'none';
-                option.classList.remove('correct', 'incorrect');
-            });
-            
-            if (isCorrect) {
-                selectedOption.classList.add('correct');
-                feedbackBox.className = 'success-box';
-                feedbackBox.textContent = "¡Correcto! Es una relación 1:N, por lo tanto, la clave foránea va en la tabla del lado 'N' (muchos), que en este caso es Empleado.";
-            } else {
-                selectedOption.classList.add('incorrect');
-                feedbackBox.className = 'warning-box';
-                feedbackBox.textContent = "Incorrecto. Intenta recordar la regla para las relaciones uno a muchos (1:N). La clave foránea siempre va en la tabla del lado 'muchos'.";
-                 // Marcar la correcta
-                 allOptions.forEach(opt => {
-                    if (opt.textContent.includes('B)')) {
-                        opt.classList.add('correct');
-                    }
-                });
-            }
-            feedbackBox.style.display = 'block';
-        }
+    <div class="inner-panel" id="pr-nm">
+      <div class="def-box">
+        <div class="term">Relación Muchos a Muchos (N:M)</div>
+        <p>Una instancia de A puede relacionarse con <strong>muchas</strong> de B, y viceversa. Es el caso más frecuente y el más complejo de traducir.</p>
+      </div>
+      <h4 style="margin:.7rem 0 .4rem;color:var(--verde-oscuro);">Regla de traducción:</h4>
+      <p style="font-size:.9rem;line-height:1.7;color:var(--gris-medio);">Se crea una <strong>tabla intermedia (puente)</strong> que contiene las claves foráneas de ambas entidades. La clave primaria de la tabla intermedia es la combinación de ambas claves foráneas.</p>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Estudiante inscrito en Cursos</div>
+        <div class="trans-demo">
+          <div class="trans-box">
+            <h5>Esquema ER</h5>
+            <p style="font-size:.85rem;">ESTUDIANTE ─(N:M)─ CURSO</p>
+            <p style="font-size:.82rem;color:var(--gris-medio);margin-top:.4rem;">Un estudiante puede inscribirse en muchos cursos; un curso puede tener muchos estudiantes.</p>
+          </div>
+          <div class="trans-arrow">→</div>
+          <div class="trans-box trans-result">
+            <h5>3 Tablas Resultantes</h5>
+            <div class="code-block" style="font-size:.78rem;">
+ESTUDIANTE (<span class="pk">Matricula PK</span>, Nombre)
+CURSO      (<span class="pk">Cod_Curso PK</span>, Nombre_Curso)
+<span class="cm">-- Tabla intermedia:</span>
+INSCRIPCION (
+  <span class="fk">Matricula FK</span>,
+  <span class="fk">Cod_Curso FK</span>,
+  Fecha_Inscripcion,
+  <span class="pk">PRIMARY KEY(Matricula, Cod_Curso)</span>
+)</div>
+          </div>
+        </div>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Extensión de INSCRIPCION</div>
+        <table class="rel-table">
+          <thead><tr><th>Matricula (FK)</th><th>Cod_Curso (FK)</th><th>Fecha_Inscripcion</th></tr></thead>
+          <tbody>
+            <tr><td class="fk">1001</td><td class="fk">MAT101</td><td>2024-02-10</td></tr>
+            <tr><td class="fk">1001</td><td class="fk">FIS201</td><td>2024-02-11</td></tr>
+            <tr><td class="fk">1002</td><td class="fk">MAT101</td><td>2024-02-12</td></tr>
+            <tr><td class="fk">1003</td><td class="fk">QUI301</td><td>2024-02-12</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    </script>
+    <div class="inner-panel" id="pr-diagrama">
+      <p style="font-size:.9rem;color:var(--gris-medio);margin-bottom:1rem;">Diagrama ER del sistema universitario con todos los tipos de relación:</p>
+      <div class="er-wrap">
+        <svg class="er-svg" viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+          <defs>
+            <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#2d7a4f"/>
+            </marker>
+          </defs>
+          <!-- ESTUDIANTE -->
+          <rect x="30" y="120" width="130" height="50" rx="8" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="2"/>
+          <text x="95" y="150" text-anchor="middle" font-family="Sora,sans-serif" font-size="13" font-weight="700" fill="#1a4d32">ESTUDIANTE</text>
+          <ellipse cx="55" cy="80" rx="28" ry="14" fill="none" stroke="#2d7a4f" stroke-width="1.2"/>
+          <text x="55" y="84" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#2d7a4f">Matricula</text>
+          <line x1="70" y1="93" x2="80" y2="120" stroke="#2d7a4f" stroke-width="1"/>
+          <ellipse cx="32" cy="195" rx="22" ry="12" fill="none" stroke="#2d7a4f" stroke-width="1.2"/>
+          <text x="32" y="199" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#2d7a4f">Nombre</text>
+          <line x1="43" y1="183" x2="50" y2="170" stroke="#2d7a4f" stroke-width="1"/>
+
+          <!-- RELACION N:M INSCRIPCION -->
+          <polygon points="290,128 340,145 290,162 240,145" fill="#fff3e0" stroke="#f0a500" stroke-width="2"/>
+          <text x="290" y="149" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" font-weight="700" fill="#c65000">INSCRIPCION</text>
+          <text x="175" y="142" font-family="Sora,sans-serif" font-size="10" fill="#c65000">N</text>
+          <text x="385" y="142" font-family="Sora,sans-serif" font-size="10" fill="#c65000">M</text>
+          <line x1="160" y1="145" x2="240" y2="145" stroke="#2d7a4f" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <ellipse cx="290" cy="105" rx="30" ry="13" fill="none" stroke="#f0a500" stroke-width="1.2"/>
+          <text x="290" y="109" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#c65000">Fecha_Inscr.</text>
+          <line x1="290" y1="118" x2="290" y2="128" stroke="#f0a500" stroke-width="1"/>
+
+          <!-- CURSO -->
+          <rect x="400" y="120" width="130" height="50" rx="8" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="2"/>
+          <text x="465" y="150" text-anchor="middle" font-family="Sora,sans-serif" font-size="13" font-weight="700" fill="#1a4d32">CURSO</text>
+          <line x1="340" y1="145" x2="400" y2="145" stroke="#2d7a4f" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <ellipse cx="490" cy="80" rx="30" ry="13" fill="none" stroke="#2d7a4f" stroke-width="1.2"/>
+          <text x="490" y="84" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#2d7a4f">Cod_Curso</text>
+          <line x1="473" y1="93" x2="462" y2="120" stroke="#2d7a4f" stroke-width="1"/>
+
+          <!-- RELACION 1:N PROFESOR-CURSO -->
+          <rect x="560" y="30" width="120" height="50" rx="8" fill="#e8f0fe" stroke="#5a7ecf" stroke-width="2"/>
+          <text x="620" y="60" text-anchor="middle" font-family="Sora,sans-serif" font-size="13" font-weight="700" fill="#1a4cad">PROFESOR</text>
+          <polygon points="565,210 605,225 565,240 525,225" fill="#e8f0fe" stroke="#5a7ecf" stroke-width="1.5"/>
+          <text x="565" y="229" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" font-weight="700" fill="#1a4cad">DICTA</text>
+          <text x="510" y="210" font-family="Sora,sans-serif" font-size="10" fill="#1a4cad">1</text>
+          <text x="605" y="210" font-family="Sora,sans-serif" font-size="10" fill="#1a4cad">N</text>
+          <line x1="620" y1="80" x2="565" y2="210" stroke="#5a7ecf" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="525" y1="225" x2="465" y2="170" stroke="#5a7ecf" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <!-- Leyenda -->
+          <rect x="20" y="265" width="14" height="14" rx="2" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="1.5"/>
+          <text x="40" y="277" font-family="Sora,sans-serif" font-size="11" fill="#1a4d32">Entidad Fuerte</text>
+          <polygon points="165,268 183,275 165,282 147,275" fill="#fff3e0" stroke="#f0a500" stroke-width="1.5"/>
+          <text x="190" y="278" font-family="Sora,sans-serif" font-size="11" fill="#c65000">Relación N:M</text>
+          <polygon points="340,268 358,275 340,282 322,275" fill="#e8f0fe" stroke="#5a7ecf" stroke-width="1.5"/>
+          <text x="365" y="278" font-family="Sora,sans-serif" font-size="11" fill="#1a4cad">Relación 1:N</text>
+          <ellipse cx="510" cy="275" rx="18" ry="10" fill="none" stroke="#2d7a4f" stroke-width="1.5"/>
+          <text x="535" y="279" font-family="Sora,sans-serif" font-size="11" fill="#1a4d32">Atributo</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SECCIÓN 4 – DOMINIO Y LLAVES
+════════════════════════════════════════════ -->
+<section class="section" id="s4">
+  <div class="card">
+    <div class="card-title"><div class="icon">🔑</div> Dominio, Llaves y Restricciones de Integridad</div>
+
+    <div class="inner-tabs">
+      <div class="inner-tab active" data-panel="pd-dominio">Dominio</div>
+      <div class="inner-tab" data-panel="pd-llaves">Tipos de Llave</div>
+      <div class="inner-tab" data-panel="pd-integridad">Integridad Referencial</div>
+      <div class="inner-tab" data-panel="pd-dom-inter">Explorador de Dominios</div>
+    </div>
+
+    <div class="inner-panel active" id="pd-dominio">
+      <div class="def-box">
+        <div class="term">Dominio de un Atributo</div>
+        <p>Es el <strong>conjunto de valores válidos</strong> que puede tomar un atributo en una entidad. Define el tipo de dato, rango permitido y restricciones aplicables. Todo atributo pertenece a exactamente un dominio.</p>
+        <p style="margin-top:.5rem;">Notación formal: <code>R ( A₁:D₁, A₂:D₂, … Aₙ:Dₙ )</code></p>
+      </div>
+      <div class="map-grid">
+        <div class="map-card m-verde">
+          <h4>D_precio</h4>
+          <p style="font-size:.82rem;color:var(--gris-medio);">Entidad: Producto<br>Tipo: Numérico real ≥ 0<br>Notación: {x | x ∈ ℝ, x ≥ 0}</p>
+          <div class="code-block" style="font-size:.76rem;margin-top:.5rem;">CHECK (precio >= 0.00)</div>
+        </div>
+        <div class="map-card m-azul">
+          <h4>D_ISBN</h4>
+          <p style="font-size:.82rem;color:var(--gris-medio);">Entidad: Libro<br>Tipo: Cadena de 13 dígitos únicos<br>Notación: alfanumérico único</p>
+          <div class="code-block" style="font-size:.76rem;margin-top:.5rem;">ISBN CHAR(13) UNIQUE</div>
+        </div>
+        <div class="map-card m-naranja">
+          <h4>D_duracion</h4>
+          <p style="font-size:.82rem;color:var(--gris-medio);">Entidad: Película<br>Tipo: Entero positivo (minutos)<br>Notación: {x | x ∈ ℕ, x > 0}</p>
+          <div class="code-block" style="font-size:.76rem;margin-top:.5rem;">CHECK (duracion > 0)</div>
+        </div>
+        <div class="map-card m-rojo">
+          <h4>D_salario</h4>
+          <p style="font-size:.82rem;color:var(--gris-medio);">Entidad: Empleado<br>Tipo: Numérico real positivo<br>Notación: {x | x ∈ ℝ, x > 0}</p>
+          <div class="code-block" style="font-size:.76rem;margin-top:.5rem;">CHECK (salario > 0.00)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="inner-panel" id="pd-llaves">
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div class="def-box">
+          <div class="term">Superclave</div>
+          <p>Cualquier conjunto de atributos que puede identificar unívocamente una tupla. Puede contener atributos redundantes.</p>
+        </div>
+        <div class="def-box">
+          <div class="term">Clave Candidata</div>
+          <p>El <strong>menor</strong> conjunto de atributos que puede identificar unívocamente cada tupla. Puede haber varias en una tabla.</p>
+        </div>
+        <div class="def-box">
+          <div class="term">Clave Primaria (PRIMARY KEY)</div>
+          <p>La clave candidata elegida por el diseñador para identificar unívocamente cada registro. <strong>No admite valores nulos ni duplicados.</strong></p>
+        </div>
+        <div class="def-box">
+          <div class="term">Clave Foránea (FOREIGN KEY)</div>
+          <p>Atributo(s) de una tabla que <strong>referencian</strong> la clave primaria de otra tabla. Garantizan la <em>integridad referencial</em>.</p>
+        </div>
+        <div class="def-box">
+          <div class="term">Clave Parcial</div>
+          <p>Atributo(s) que identifican una entidad débil <strong>dentro del contexto</strong> de su entidad propietaria. Por sí solos no son únicos globalmente.</p>
+        </div>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo visual — claves en el sistema Universitario</div>
+        <table class="rel-table">
+          <thead><tr><th>Tabla</th><th>PRIMARY KEY</th><th>FOREIGN KEY(s)</th></tr></thead>
+          <tbody>
+            <tr><td>ESTUDIANTE</td><td class="pk">Matricula</td><td>—</td></tr>
+            <tr><td>CURSO</td><td class="pk">Cod_Curso</td><td>—</td></tr>
+            <tr><td>PROFESOR</td><td class="pk">ID_Prof</td><td>—</td></tr>
+            <tr><td>INSCRIPCION</td><td class="pk">(Matricula, Cod_Curso)</td><td class="fk">Matricula → ESTUDIANTE, Cod_Curso → CURSO</td></tr>
+            <tr><td>FACTURA</td><td class="pk">(ID_Cliente, Num_Factura)</td><td class="fk">ID_Cliente → CLIENTE</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="inner-panel" id="pd-integridad">
+      <div class="def-box">
+        <div class="term">Restricción de Integridad Referencial</div>
+        <p>Garantiza que todo valor de una clave foránea debe existir previamente en la clave primaria de la tabla referenciada. Notación: <code>Tabla1.FK ⊆ Tabla2.PK</code></p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — ¿Qué pasa si se viola la integridad referencial?</div>
+        <table class="rel-table">
+          <thead><tr><th colspan="4">INSCRIPCION (con error)</th></tr><tr><th>Matricula</th><th>Cod_Curso</th><th>Fecha</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td class="fk">1001</td><td class="fk">MAT101</td><td>2024-02-10</td><td><span class="badge badge-verde">✓ OK</span></td></tr>
+            <tr style="background:#fce8e6;"><td style="color:#b31412;font-weight:700;">9999</td><td class="fk">MAT101</td><td>2024-02-11</td><td><span class="badge badge-rojo">✗ ERROR</span></td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.85rem;color:#8b2000;margin-top:.5rem;">⚠️ El estudiante con Matricula=9999 no existe en ESTUDIANTE → violación de integridad referencial.</p>
+      </div>
+      <div class="ejemplo">
+        <div class="ej-label">📌 Ejemplo — Restricciones en SQL</div>
+        <div class="code-block">
+<span class="cm">-- Restricción de integridad referencial</span>
+INSCRIPCION.Matricula  ⊆ ESTUDIANTE.Matricula
+INSCRIPCION.Cod_Curso  ⊆ CURSO.Cod_Curso
+
+<span class="cm">-- En SQL DDL:</span>
+<span class="kw">FOREIGN KEY</span> (Matricula)  <span class="kw">REFERENCES</span> ESTUDIANTE(Matricula)
+  <span class="kw">ON DELETE CASCADE</span>
+  <span class="kw">ON UPDATE CASCADE</span>,
+<span class="kw">FOREIGN KEY</span> (Cod_Curso)  <span class="kw">REFERENCES</span> CURSO(Cod_Curso)
+        </div>
+      </div>
+    </div>
+
+    <div class="inner-panel" id="pd-dom-inter">
+      <p style="font-size:.9rem;color:var(--gris-medio);margin-bottom:.8rem;">Seleccione un atributo para explorar su dominio, restricciones y representación SQL:</p>
+      <div class="dom-selector" id="domChips">
+        <div class="dom-chip sel" data-dom="edad">Edad</div>
+        <div class="dom-chip" data-dom="correo">Correo</div>
+        <div class="dom-chip" data-dom="calificacion">Calificación</div>
+        <div class="dom-chip" data-dom="fecha">Fecha Nacimiento</div>
+        <div class="dom-chip" data-dom="sexo">Sexo</div>
+        <div class="dom-chip" data-dom="isbn">ISBN</div>
+      </div>
+      <div class="dom-result-box" id="domResult">
+        <!-- se llena con JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SECCIÓN 5 – OPERACIONALIZACIÓN
+════════════════════════════════════════════ -->
+<section class="section" id="s5">
+  <div class="card">
+    <div class="card-title"><div class="icon">🗺️</div> Cuadro de Operacionalización del Proceso de Traducción ER</div>
+    <p style="font-size:.9rem;color:var(--gris-medio);margin-bottom:1.5rem;">El siguiente cuadro organiza sistemáticamente todo el proceso de traducción dentro del ciclo de vida del desarrollo del software (CVDS).</p>
+
+    <!-- TABLA OPERACIONAL PRINCIPAL -->
+    <div style="overflow-x:auto;">
+    <table class="rel-table" style="min-width:750px;">
+      <thead>
+        <tr>
+          <th style="width:5%">#</th>
+          <th style="width:18%">Fase CVDS</th>
+          <th style="width:20%">Actividad de Diseño BD</th>
+          <th style="width:25%">Elemento ER → Relacional</th>
+          <th style="width:20%">Regla / Técnica</th>
+          <th style="width:12%">Artefacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pk">1</td>
+          <td><span class="badge badge-azul">Requisitos</span></td>
+          <td>Análisis del universo del discurso</td>
+          <td>Identificar objetos del mundo real</td>
+          <td>Entrevistas, casos de uso</td>
+          <td>Especificación</td>
+        </tr>
+        <tr>
+          <td class="pk">2</td>
+          <td><span class="badge badge-verde">Diseño Conceptual</span></td>
+          <td>Modelado ER</td>
+          <td>Entidades, Atributos, Relaciones</td>
+          <td>Diagrama ER (Chen / IE)</td>
+          <td>Diagrama ER</td>
+        </tr>
+        <tr>
+          <td class="pk">3</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Identificar entidades fuertes</td>
+          <td>Entidad fuerte → Tabla + PK</td>
+          <td>Cada entidad = tabla; PK del ER = PK tabla</td>
+          <td>Esquema Relacional</td>
+        </tr>
+        <tr>
+          <td class="pk">4</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir entidades débiles</td>
+          <td>Entidad débil → Tabla con PK compuesta</td>
+          <td>Clave parcial + PK entidad fuerte = PK</td>
+          <td>Esquema Relacional</td>
+        </tr>
+        <tr>
+          <td class="pk">5</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir atributos compuestos</td>
+          <td>Atributo compuesto → columnas simples</td>
+          <td>Descomposición en sub-atributos</td>
+          <td>Esquema Relacional</td>
+        </tr>
+        <tr>
+          <td class="pk">6</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir atributos multivalorados</td>
+          <td>Atributo multivalorado → nueva tabla + FK</td>
+          <td>Nueva tabla con PK(original + atributo)</td>
+          <td>Tabla auxiliar</td>
+        </tr>
+        <tr>
+          <td class="pk">7</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir relación 1:1</td>
+          <td>FK en la tabla de participación total</td>
+          <td>FK puede ir en cualquier lado; preferir total</td>
+          <td>Restricción FK</td>
+        </tr>
+        <tr>
+          <td class="pk">8</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir relación 1:N</td>
+          <td>FK en el lado N (muchos)</td>
+          <td>FK referencia PK del lado 1</td>
+          <td>Restricción FK</td>
+        </tr>
+        <tr>
+          <td class="pk">9</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Traducir relación N:M</td>
+          <td>Nueva tabla intermedia con ambas FK</td>
+          <td>PK = combinación de ambas FK</td>
+          <td>Tabla puente</td>
+        </tr>
+        <tr>
+          <td class="pk">10</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Definir dominios de atributos</td>
+          <td>Dominio de cada columna</td>
+          <td>Tipo de dato + CHECK + NOT NULL</td>
+          <td>DDL SQL</td>
+        </tr>
+        <tr>
+          <td class="pk">11</td>
+          <td><span class="badge badge-verde">Diseño Lógico</span></td>
+          <td>Aplicar integridad referencial</td>
+          <td>FK → PK referenciada</td>
+          <td>ON DELETE / ON UPDATE CASCADE o RESTRICT</td>
+          <td>Restricciones</td>
+        </tr>
+        <tr>
+          <td class="pk">12</td>
+          <td><span class="badge badge-naranja">Normalización</span></td>
+          <td>Verificar formas normales</td>
+          <td>Esquema relacional completo</td>
+          <td>1FN, 2FN, 3FN, FNBC</td>
+          <td>Esquema normal</td>
+        </tr>
+        <tr>
+          <td class="pk">13</td>
+          <td><span class="badge badge-rojo">Diseño Físico</span></td>
+          <td>Implementar en SGBD</td>
+          <td>Esquema normalizado</td>
+          <td>CREATE TABLE, índices, triggers</td>
+          <td>Script SQL</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- Flujo visual -->
+  <div class="card">
+    <div class="card-title"><div class="icon">🔀</div> Árbol de decisión para la Traducción</div>
+    <div class="er-wrap">
+      <svg class="er-svg" viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+        <defs>
+          <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#888"/>
+          </marker>
+        </defs>
+        <!-- Inicio -->
+        <rect x="305" y="10" width="150" height="38" rx="19" fill="#2d7a4f"/>
+        <text x="380" y="34" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="white">Elemento ER</text>
+        <line x1="380" y1="48" x2="380" y2="70" stroke="#888" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <!-- Decisión Tipo -->
+        <polygon points="380,72 470,95 380,118 290,95" fill="#fff3e0" stroke="#f0a500" stroke-width="1.5"/>
+        <text x="380" y="98" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" font-weight="600" fill="#c65000">¿Qué tipo?</text>
+
+        <!-- Ramas -->
+        <!-- Entidad -->
+        <line x1="290" y1="95" x2="100" y2="150" stroke="#888" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <text x="175" y="120" font-family="Sora,sans-serif" font-size="10" fill="#555">Entidad</text>
+        <!-- Atributo -->
+        <line x1="380" y1="118" x2="380" y2="148" stroke="#888" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <text x="393" y="138" font-family="Sora,sans-serif" font-size="10" fill="#555">Atributo</text>
+        <!-- Relación -->
+        <line x1="470" y1="95" x2="650" y2="150" stroke="#888" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <text x="575" y="120" font-family="Sora,sans-serif" font-size="10" fill="#555">Relación</text>
+
+        <!-- Decisión Entidad -->
+        <polygon points="100,152 175,170 100,188 25,170" fill="#e8f5ee" stroke="#2d7a4f" stroke-width="1.5"/>
+        <text x="100" y="174" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" font-weight="600" fill="#1a4d32">¿Fuerte o Débil?</text>
+        <line x1="50" y1="180" x2="30" y2="225" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="145" y1="180" x2="160" y2="225" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <text x="22" y="215" font-family="Sora,sans-serif" font-size="9" fill="#888">Fuerte</text>
+        <text x="148" y="215" font-family="Sora,sans-serif" font-size="9" fill="#888">Débil</text>
+        <rect x="0" y="225" width="80" height="34" rx="6" fill="#2d7a4f"/>
+        <text x="40" y="240" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Tabla + PK</text>
+        <text x="40" y="252" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#a8d8a8">propia</text>
+        <rect x="115" y="225" width="90" height="34" rx="6" fill="#2d7a4f"/>
+        <text x="160" y="240" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Tabla + PK</text>
+        <text x="160" y="252" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#a8d8a8">parcial + FK propiet.</text>
+
+        <!-- Decisión Atributo -->
+        <polygon points="380,150 455,168 380,186 305,168" fill="#e8f0fe" stroke="#5a7ecf" stroke-width="1.5"/>
+        <text x="380" y="172" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" font-weight="600" fill="#1a4cad">¿Tipo atributo?</text>
+        <line x1="310" y1="172" x2="285" y2="215" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="380" y1="186" x2="380" y2="215" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="450" y1="172" x2="475" y2="215" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <text x="255" y="210" font-family="Sora,sans-serif" font-size="9" fill="#888">Simple</text>
+        <text x="350" y="210" font-family="Sora,sans-serif" font-size="9" fill="#888">Compuesto</text>
+        <text x="450" y="210" font-family="Sora,sans-serif" font-size="9" fill="#888">Multivalorado</text>
+        <rect x="248" y="218" width="70" height="28" rx="5" fill="#5a7ecf"/>
+        <text x="283" y="237" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Columna directa</text>
+        <rect x="335" y="218" width="90" height="28" rx="5" fill="#5a7ecf"/>
+        <text x="380" y="237" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Expandir en columnas</text>
+        <rect x="437" y="218" width="80" height="28" rx="5" fill="#5a7ecf"/>
+        <text x="477" y="237" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Nueva tabla + FK</text>
+
+        <!-- Decisión Relación -->
+        <polygon points="650,152 725,170 650,188 575,170" fill="#fce8e6" stroke="#e05a2b" stroke-width="1.5"/>
+        <text x="650" y="174" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" font-weight="600" fill="#8b2000">Cardinalidad</text>
+        <line x1="585" y1="175" x2="560" y2="218" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="650" y1="188" x2="650" y2="218" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="715" y1="175" x2="735" y2="218" stroke="#888" stroke-width="1" marker-end="url(#arr3)"/>
+        <text x="538" y="212" font-family="Sora,sans-serif" font-size="9" fill="#888">1:1</text>
+        <text x="637" y="212" font-family="Sora,sans-serif" font-size="9" fill="#888">1:N</text>
+        <text x="733" y="212" font-family="Sora,sans-serif" font-size="9" fill="#888">N:M</text>
+        <rect x="520" y="222" width="70" height="36" rx="5" fill="#e05a2b"/>
+        <text x="555" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">FK en tabla</text>
+        <text x="555" y="252" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#ffccc4">de part. total</text>
+        <rect x="610" y="222" width="80" height="36" rx="5" fill="#e05a2b"/>
+        <text x="650" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">FK en tabla</text>
+        <text x="650" y="252" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#ffccc4">lado N</text>
+        <rect x="702" y="222" width="55" height="36" rx="5" fill="#e05a2b"/>
+        <text x="729" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="white">Nueva tabla</text>
+        <text x="729" y="252" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#ffccc4">intermedia</text>
+
+        <!-- Resultado final -->
+        <rect x="230" y="310" width="300" height="38" rx="10" fill="#1a4d32"/>
+        <text x="380" y="334" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" font-weight="700" fill="white">✓ Esquema Relacional Completo</text>
+        <line x1="40" y1="259" x2="280" y2="315" stroke="#2d7a4f" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+        <line x1="380" y1="246" x2="380" y2="310" stroke="#2d7a4f" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+        <line x1="650" y1="258" x2="480" y2="315" stroke="#2d7a4f" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Caso de estudio completo -->
+  <div class="card">
+    <div class="card-title"><div class="icon">📖</div> Caso de Estudio Completo — Sistema de Biblioteca</div>
+    <div class="inner-tabs">
+      <div class="inner-tab active" data-panel="lib-er">ER Original</div>
+      <div class="inner-tab" data-panel="lib-trad">Traducción Completa</div>
+      <div class="inner-tab" data-panel="lib-sql">Script SQL</div>
+    </div>
+    <div class="inner-panel active" id="lib-er">
+      <table class="rel-table">
+        <thead><tr><th>Entidad / Relación</th><th>Tipo</th><th>Atributos</th><th>PK</th></tr></thead>
+        <tbody>
+          <tr><td>LIBRO</td><td><span class="badge badge-verde">Fuerte</span></td><td>ID_Libro, Titulo, Autor, Año</td><td class="pk">ID_Libro</td></tr>
+          <tr><td>USUARIO</td><td><span class="badge badge-verde">Fuerte</span></td><td>ID_Usuario, Nombre, Email, Teléfonos*</td><td class="pk">ID_Usuario</td></tr>
+          <tr><td>PRESTAMO</td><td><span class="badge badge-naranja">Relación N:M</span></td><td>Fecha, Devuelto</td><td class="pk">(ID_Libro, ID_Usuario, Fecha)</td></tr>
+          <tr><td>TEL_USUARIO</td><td><span class="badge badge-rojo">Multivalorado</span></td><td>Teléfono</td><td class="pk">(ID_Usuario, Teléfono)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="inner-panel" id="lib-trad">
+      <p style="font-size:.88rem;color:var(--gris-medio);margin-bottom:.8rem;">Esquema relacional resultante (intención de las relaciones):</p>
+      <div class="code-block">
+LIBRO     ( <span class="pk">ID_Libro PRIMARY KEY</span>, Titulo, Autor, Anio )
+USUARIO   ( <span class="pk">ID_Usuario PRIMARY KEY</span>, Nombre, Email )
+TEL_UASUARIO ( <span class="pk">ID_Usuario, Telefono — PRIMARY KEY(ID_Usuario,Telefono)</span>, <span class="fk">FK(ID_Usuario)→USUARIO</span> )
+PRESTAMO  ( <span class="pk">ID_Prestamo PRIMARY KEY</span>, <span class="fk">ID_Libro FK</span>, <span class="fk">ID_Usuario FK</span>, Fecha, Devuelto,
+            <span class="fk">FOREIGN KEY(ID_Libro)→LIBRO, FOREIGN KEY(ID_Usuario)→USUARIO</span> )
+      </div>
+      <p style="font-size:.85rem;color:var(--gris-medio);margin-top:.8rem;">Restricciones de integridad referencial:</p>
+      <ul style="font-size:.85rem;line-height:2;padding-left:1.2rem;color:var(--gris-medio);">
+        <li>PRESTAMO.ID_Libro ⊆ LIBRO.ID_Libro</li>
+        <li>PRESTAMO.ID_Usuario ⊆ USUARIO.ID_Usuario</li>
+        <li>TEL_USUARIO.ID_Usuario ⊆ USUARIO.ID_Usuario</li>
+      </ul>
+    </div>
+    <div class="inner-panel" id="lib-sql">
+      <div class="code-block">
+<span class="kw">CREATE TABLE</span> LIBRO (
+  <span class="pk">ID_Libro    INT            PRIMARY KEY</span>,
+  Titulo      VARCHAR(200)   NOT NULL,
+  Autor       VARCHAR(120),
+  Anio        YEAR
+);
+
+<span class="kw">CREATE TABLE</span> USUARIO (
+  <span class="pk">ID_Usuario  INT            PRIMARY KEY</span>,
+  Nombre      VARCHAR(100)   NOT NULL,
+  Email       VARCHAR(120)   UNIQUE
+);
+
+<span class="kw">CREATE TABLE</span> TEL_USUARIO (
+  <span class="fk">ID_Usuario  INT            NOT NULL</span>,
+  Telefono    VARCHAR(15)    NOT NULL,
+  <span class="pk">PRIMARY KEY (ID_Usuario, Telefono)</span>,
+  <span class="fk">FOREIGN KEY (ID_Usuario) REFERENCES USUARIO(ID_Usuario)
+    ON DELETE CASCADE</span>
+);
+
+<span class="kw">CREATE TABLE</span> PRESTAMO (
+  <span class="pk">ID_Prestamo INT            PRIMARY KEY</span>,
+  <span class="fk">ID_Libro    INT            NOT NULL</span>,
+  <span class="fk">ID_Usuario  INT            NOT NULL</span>,
+  Fecha       DATE           NOT NULL,
+  Devuelto    BOOLEAN        DEFAULT FALSE,
+  <span class="fk">FOREIGN KEY (ID_Libro)   REFERENCES LIBRO(ID_Libro)</span>,
+  <span class="fk">FOREIGN KEY (ID_Usuario) REFERENCES USUARIO(ID_Usuario)</span>
+);
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SECCIÓN 6 – AUTOEVALUACIÓN
+════════════════════════════════════════════ -->
+<section class="section" id="s6">
+  <div class="card">
+    <div class="card-title"><div class="icon">✅</div> Autoevaluación — Traducción de Modelos ER</div>
+    <div class="progress-wrap"><div class="progress-bar" id="quizProgress" style="width:0%"></div></div>
+    <p id="quizCounter" style="font-size:.84rem;color:var(--gris-medio);margin-bottom:1.2rem;">Pregunta 1 de 8</p>
+    <div id="quizContainer"><!-- se llena con JS --></div>
+    <div class="quiz-nav">
+      <button class="btn btn-verde" id="btnNext" onclick="nextQuestion()" style="display:none">Siguiente →</button>
+      <button class="btn btn-outline" onclick="resetQuiz()">↺ Reiniciar</button>
+    </div>
+    <div id="quizResult" style="display:none;margin-top:1.5rem;"></div>
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<footer style="background:var(--verde-oscuro);color:rgba(255,255,255,.7);text-align:center;padding:1.5rem;font-size:.82rem;margin-top:2rem;">
+  OVA — Diseño de Bases de Datos · Ingeniería de Sistemas · UNICORDOBA<br>
+  Basado en: Elmasri &amp; Navathe (2016) y Silberschatz, Korth &amp; Sudarshan (2010)
+</footer>
+
+<script>
+// ═══════════════════════════
+// NAVEGACIÓN PRINCIPAL
+// ═══════════════════════════
+document.getElementById('mainNav').querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.section).classList.add('active');
+  });
+});
+
+// ═══════════════════════════
+// TABS INTERNAS GENÉRICAS
+// ═══════════════════════════
+document.querySelectorAll('.inner-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const parent = tab.closest('.card') || tab.closest('.section');
+    parent.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+    parent.querySelectorAll('.inner-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = parent.querySelector('#' + tab.dataset.panel) ||
+                  parent.querySelector('#' + tab.dataset.demo);
+    if (panel) panel.classList.add('active');
+    if (tab.dataset.demo) fillDemo(tab.dataset.demo);
+  });
+});
+
+// ═══════════════════════════
+// ACCORDION
+// ═══════════════════════════
+function toggleAcc(header) {
+  const item = header.closest('.acc-item');
+  item.classList.toggle('open');
+}
+
+// ═══════════════════════════
+// DEMO INTERACTIVA — ENTIDADES
+// ═══════════════════════════
+const demoData = {
+  'd-biblioteca': {
+    titulo: 'Sistema de Biblioteca',
+    er: [
+      { nombre:'LIBRO', tipo:'Fuerte', atrs:'ID_Libro, Titulo, Autor', pk:'ID_Libro' },
+      { nombre:'USUARIO', tipo:'Fuerte', atrs:'ID_Usuario, Nombre, Email, {Telefonos}', pk:'ID_Usuario' },
+      { nombre:'PRESTAMO', tipo:'Relación N:M', atrs:'Fecha, Devuelto', pk:'(ID_Libro, ID_Usuario)' }
+    ],
+    relacional: `LIBRO     (<span class="pk">ID_Libro PK</span>, Titulo, Autor)
+USUARIO   (<span class="pk">ID_Usuario PK</span>, Nombre, Email)
+TEL_USR   (<span class="pk">ID_Usuario, Telefono — PK compuesta</span>)
+PRESTAMO  (<span class="pk">ID_Pres PK</span>, <span class="fk">ID_Libro FK</span>, <span class="fk">ID_Usuario FK</span>, Fecha, Devuelto)`
+  },
+  'd-universidad': {
+    titulo: 'Sistema Universitario',
+    er: [
+      { nombre:'ESTUDIANTE', tipo:'Fuerte', atrs:'Matricula, Nombre, Apellido, Email', pk:'Matricula' },
+      { nombre:'CURSO', tipo:'Fuerte', atrs:'Cod_Curso, Nombre_Curso, NHoras', pk:'Cod_Curso' },
+      { nombre:'PROFESOR', tipo:'Fuerte', atrs:'ID_Prof, Nombre, Especialidad', pk:'ID_Prof' },
+      { nombre:'INSCRIPCION', tipo:'Relación N:M', atrs:'Fecha_Inscripcion', pk:'(Matricula, Cod_Curso)' }
+    ],
+    relacional: `ESTUDIANTE (<span class="pk">Matricula PK</span>, Nombre, Apellido, Email)
+CURSO      (<span class="pk">Cod_Curso PK</span>, Nombre_Curso, NHoras)
+PROFESOR   (<span class="pk">ID_Prof PK</span>, Nombre, Especialidad)
+INSCRIPCION(<span class="pk">Matricula, Cod_Curso — PK compuesta</span>, <span class="fk">FK(Matricula)→ESTUDIANTE</span>, <span class="fk">FK(Cod_Curso)→CURSO</span>, Fecha_Inscripcion)`
+  },
+  'd-empresa': {
+    titulo: 'Sistema Empresarial',
+    er: [
+      { nombre:'EMPLEADO', tipo:'Fuerte', atrs:'ID_Empl, Nombre, {Telefonos}, Salario', pk:'ID_Empl' },
+      { nombre:'DEPARTAMENTO', tipo:'Fuerte', atrs:'ID_Depto, Nombre, Presupuesto', pk:'ID_Depto' },
+      { nombre:'PROYECTO', tipo:'Fuerte', atrs:'ID_Proy, Nombre, Duracion', pk:'ID_Proy' },
+      { nombre:'FACTURA', tipo:'Débil (de CLIENTE)', atrs:'Num_Factura, Fecha', pk:'(ID_Cliente, Num_Factura)' }
+    ],
+    relacional: `EMPLEADO    (<span class="pk">ID_Empl PK</span>, Nombre, Salario, <span class="fk">ID_Depto FK</span>)
+DEPARTAMENTO(<span class="pk">ID_Depto PK</span>, Nombre, Presupuesto)
+PROYECTO    (<span class="pk">ID_Proy PK</span>, Nombre, Duracion)
+TEL_EMPL    (<span class="pk">ID_Empl, Telefono — PK compuesta</span>)
+TRABAJA_EN  (<span class="pk">ID_Empl, ID_Proy — PK compuesta</span>, <span class="fk">FK→EMPLEADO, FK→PROYECTO</span>, Horas)
+FACTURA     (<span class="pk">ID_Cliente, Num_Factura — PK compuesta</span>, Fecha, <span class="fk">FK(ID_Cliente)→CLIENTE</span>)`
+  }
+};
+
+function fillDemo(key) {
+  const d = demoData[key];
+  if (!d) return;
+  const area = document.getElementById('demo-area-ent');
+  let rows = d.er.map(e =>
+    `<tr><td><strong>${e.nombre}</strong></td><td><span class="badge ${e.tipo.includes('Fuerte')?'badge-verde':e.tipo.includes('Débil')?'badge-rojo':'badge-naranja'}">${e.tipo}</span></td><td style="font-size:.83rem;">${e.atrs}</td><td class="pk" style="font-size:.83rem;">${e.pk}</td></tr>`
+  ).join('');
+  area.innerHTML = `
+    <h4 style="font-size:.95rem;color:var(--verde-oscuro);margin-bottom:.7rem;">🔍 ${d.titulo} — Elementos ER</h4>
+    <table class="rel-table" style="margin-bottom:1rem;">
+      <thead><tr><th>Entidad</th><th>Tipo</th><th>Atributos</th><th>PK</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <h4 style="font-size:.95rem;color:var(--verde-oscuro);margin-bottom:.5rem;">📋 Esquema Relacional Resultante</h4>
+    <div class="code-block" style="font-size:.82rem;">${d.relacional}</div>`;
+}
+fillDemo('d-biblioteca');
+
+// ═══════════════════════════
+// EXPLORADOR DE DOMINIOS
+// ═══════════════════════════
+const dominios = {
+  edad: {
+    nombre: 'Edad (Persona)',
+    tipo: 'Entero positivo',
+    rango: '0 ≤ x ≤ 150',
+    notacion: 'D_edad = {x | x ∈ ℕ₀, 0 ≤ x ≤ 150}',
+    sql: 'edad TINYINT UNSIGNED CHECK (edad >= 0 AND edad <= 150)',
+    nulos: 'Puede ser NULL si desconocida',
+    ejemplos: ['0', '18', '65', '120']
+  },
+  correo: {
+    nombre: 'Correo Electrónico',
+    tipo: 'Cadena de texto con formato específico',
+    rango: 'VARCHAR(255), patrón x@y.z',
+    notacion: 'D_email = {s | s ∈ Strings, s cumple RFC 5321}',
+    sql: 'email VARCHAR(255) UNIQUE CHECK (email LIKE \'%@%.%\')',
+    nulos: 'No admite NULL (atributo obligatorio)',
+    ejemplos: ['juan@unicordoba.edu.co', 'a@b.com']
+  },
+  calificacion: {
+    nombre: 'Calificación Académica',
+    tipo: 'Numérico decimal',
+    rango: '0.0 ≤ x ≤ 5.0',
+    notacion: 'D_nota = {x | x ∈ ℝ, 0.0 ≤ x ≤ 5.0}',
+    sql: 'nota DECIMAL(3,1) CHECK (nota >= 0.0 AND nota <= 5.0)',
+    nulos: 'NULL si aún no hay nota registrada',
+    ejemplos: ['3.5', '4.8', '2.0', '5.0']
+  },
+  fecha: {
+    nombre: 'Fecha de Nacimiento',
+    tipo: 'Fecha calendario',
+    rango: '1900-01-01 ≤ x ≤ CURDATE()',
+    notacion: 'D_fecha_nac = {d | d ∈ Fechas, d ≤ hoy}',
+    sql: 'fecha_nac DATE CHECK (fecha_nac <= CURDATE())',
+    nulos: 'Puede ser NULL si no se registra',
+    ejemplos: ['2000-05-21', '1990-12-01']
+  },
+  sexo: {
+    nombre: 'Sexo Biológico',
+    tipo: 'Enumeración',
+    rango: 'Conjunto finito: {M, F, O}',
+    notacion: 'D_sexo = {\'M\', \'F\', \'O\'}',
+    sql: 'sexo CHAR(1) CHECK (sexo IN (\'M\', \'F\', \'O\'))',
+    nulos: 'Puede ser NULL',
+    ejemplos: ['M', 'F', 'O']
+  },
+  isbn: {
+    nombre: 'ISBN de Libro',
+    tipo: 'Alfanumérico único de 13 dígitos',
+    rango: 'Cadena única, formato 978-X-XXX-XXXXX-X',
+    notacion: 'D_isbn = {x | x es cadena de 13 dígitos y es único}',
+    sql: 'isbn CHAR(13) UNIQUE NOT NULL',
+    nulos: 'No admite NULL ni duplicados',
+    ejemplos: ['9783161484100', '9780132350884']
+  }
+};
+
+function renderDom(key) {
+  const d = dominios[key];
+  document.getElementById('domResult').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem;">
+      <div><span style="font-size:11px;color:var(--gris-medio);text-transform:uppercase;">Atributo</span><p style="font-weight:700;color:var(--verde-oscuro);">${d.nombre}</p></div>
+      <div><span style="font-size:11px;color:var(--gris-medio);text-transform:uppercase;">Tipo de dato</span><p style="font-weight:600;">${d.tipo}</p></div>
+      <div><span style="font-size:11px;color:var(--gris-medio);text-transform:uppercase;">Rango / Restricción</span><p style="font-size:.87rem;">${d.rango}</p></div>
+      <div><span style="font-size:11px;color:var(--gris-medio);text-transform:uppercase;">Valores nulos</span><p style="font-size:.87rem;">${d.nulos}</p></div>
+    </div>
+    <div class="def-box" style="margin:.5rem 0 .7rem;"><div class="term">Notación formal</div><p><code>${d.notacion}</code></p></div>
+    <div class="code-block" style="font-size:.82rem;">${d.sql}</div>
+    <div style="margin-top:.6rem;"><span style="font-size:11px;color:var(--gris-medio);text-transform:uppercase;">Ejemplos válidos: </span>${d.ejemplos.map(e=>`<code style="background:#e8f5ee;padding:2px 6px;border-radius:4px;margin:0 3px;font-size:.82rem;">${e}</code>`).join('')}</div>`;
+}
+document.getElementById('domChips').querySelectorAll('.dom-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.dom-chip').forEach(c => c.classList.remove('sel'));
+    chip.classList.add('sel');
+    renderDom(chip.dataset.dom);
+  });
+});
+renderDom('edad');
+
+// ═══════════════════════════
+// AUTOEVALUACIÓN
+// ═══════════════════════════
+const preguntas = [
+  {
+    q: '¿Cuál es la diferencia fundamental entre la intención y la extensión de una relación?',
+    opts: [
+      'La intención son los datos reales y la extensión es el esquema.',
+      'La intención es la descripción estructural (esquema) y la extensión son las tuplas reales con datos.',
+      'Ambas son sinónimos en el modelo relacional.',
+      'La intención se define en SQL con SELECT y la extensión con CREATE TABLE.'
+    ],
+    correct: 1,
+    feedback: '✓ Correcto. La intención (o intensión) describe la estructura: nombre, atributos y dominios. La extensión son los datos reales (tuplas) en un momento dado.'
+  },
+  {
+    q: 'Una entidad débil se distingue porque...',
+    opts: [
+      'No tiene ningún atributo.',
+      'Tiene su propia clave primaria independiente.',
+      'Su existencia e identificación depende de otra entidad (entidad propietaria) y posee solo una clave parcial.',
+      'Siempre participa en relaciones N:M.'
+    ],
+    correct: 2,
+    feedback: '✓ Correcto. La entidad débil no puede identificarse por sí sola; necesita combinarse su clave parcial con la PK de la entidad fuerte propietaria.'
+  },
+  {
+    q: '¿Dónde se coloca la clave foránea en una relación de tipo 1:N?',
+    opts: [
+      'En la tabla del lado "uno" (1).',
+      'En una nueva tabla intermedia.',
+      'En la tabla del lado "muchos" (N).',
+      'En ambas tablas.'
+    ],
+    correct: 2,
+    feedback: '✓ Correcto. En la relación 1:N, la clave foránea (FK) siempre va en el lado N, referenciando la PK del lado 1.'
+  },
+  {
+    q: '¿Cómo se traduce al modelo relacional una relación N:M entre ESTUDIANTE y CURSO?',
+    opts: [
+      'Se agrega una FK en ESTUDIANTE apuntando a CURSO.',
+      'Se agrega una FK en CURSO apuntando a ESTUDIANTE.',
+      'Se crea una tabla intermedia (ej. INSCRIPCION) con las PK de ambas tablas como FK y PK compuesta.',
+      'No se necesita traducción adicional; ambas tablas se fusionan.'
+    ],
+    correct: 2,
+    feedback: '✓ Correcto. Las relaciones N:M generan una tabla intermedia (puente) cuya PK es la combinación de las FK de ambas entidades participantes.'
+  },
+  {
+    q: '¿Qué ocurre con un atributo multivalorado al traducir al modelo relacional?',
+    opts: [
+      'Se convierte en una columna adicional de la misma tabla.',
+      'Se omite porque el modelo relacional no lo soporta.',
+      'Se crea una nueva tabla separada con la PK de la entidad original como FK.',
+      'Se descompone en sus sub-componentes como columnas simples.'
+    ],
+    correct: 2,
+    feedback: '✓ Correcto. Un atributo multivalorado requiere una nueva tabla que contenga la FK de la entidad y el atributo, formando ambos la PK de la nueva tabla.'
+  },
+  {
+    q: '¿Qué representa el "dominio" de un atributo en una base de datos relacional?',
+    opts: [
+      'El nombre de la tabla a la que pertenece el atributo.',
+      'El conjunto de todos los valores válidos que puede tomar el atributo.',
+      'El número máximo de caracteres permitidos.',
+      'La restricción de clave primaria del atributo.'
+    ],
+    correct: 1,
+    feedback: '✓ Correcto. El dominio define el tipo de dato, rango y restricciones válidas para un atributo. Ejemplos: D_precio = {x | x ∈ ℝ, x ≥ 0}.'
+  },
+  {
+    q: '¿Qué garantiza una restricción de integridad referencial?',
+    opts: [
+      'Que ninguna tupla puede tener valores nulos.',
+      'Que todo valor de una clave foránea exista previamente en la clave primaria de la tabla referenciada.',
+      'Que la clave primaria no se puede modificar nunca.',
+      'Que todos los atributos tienen valores únicos.'
+    ],
+    correct: 1,
+    feedback: '✓ Correcto. La integridad referencial (FK ⊆ PK referenciada) impide referencias a tuplas inexistentes, manteniendo la consistencia de los datos.'
+  },
+  {
+    q: 'En el ciclo de diseño de bases de datos, ¿en qué etapa se realiza la traducción del modelo ER al esquema relacional?',
+    opts: [
+      'Diseño conceptual.',
+      'Diseño físico.',
+      'Diseño lógico.',
+      'Implementación SQL.'
+    ],
+    correct: 2,
+    feedback: '✓ Correcto. El diseño lógico es la etapa donde se traduce el esquema conceptual (ER) al esquema relacional, usando las reglas de traducción de entidades, atributos y relaciones.'
+  }
+];
+
+let currentQ = 0;
+let score = 0;
+let answered = false;
+
+function renderQuestion() {
+  const q = preguntas[currentQ];
+  const pct = Math.round((currentQ / preguntas.length) * 100);
+  document.getElementById('quizProgress').style.width = pct + '%';
+  document.getElementById('quizCounter').textContent = `Pregunta ${currentQ + 1} de ${preguntas.length} | Puntaje: ${score}`;
+  document.getElementById('btnNext').style.display = 'none';
+  answered = false;
+  document.getElementById('quizContainer').innerHTML = `
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-options">
+      ${q.opts.map((o, i) => `<div class="quiz-opt" onclick="checkAnswer(${i})" data-idx="${i}">${o}</div>`).join('')}
+    </div>
+    <div class="quiz-feedback" id="qFeedback"></div>`;
+}
+
+function checkAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  const q = preguntas[currentQ];
+  const opts = document.querySelectorAll('.quiz-opt');
+  const fb = document.getElementById('qFeedback');
+  opts[q.correct].classList.add('correct');
+  if (idx === q.correct) {
+    score++;
+    fb.className = 'quiz-feedback show ok';
+    fb.textContent = q.feedback;
+  } else {
+    opts[idx].classList.add('wrong');
+    fb.className = 'quiz-feedback show ko';
+    fb.textContent = '✗ Respuesta incorrecta. ' + q.feedback;
+  }
+  document.getElementById('btnNext').style.display = 'inline-block';
+  if (currentQ === preguntas.length - 1) {
+    document.getElementById('btnNext').textContent = 'Ver resultado ✓';
+  }
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= preguntas.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResult() {
+  const pct = Math.round((score / preguntas.length) * 100);
+  document.getElementById('quizProgress').style.width = '100%';
+  const nivel = pct >= 90 ? '🏆 Excelente' : pct >= 70 ? '👍 Aprobado' : pct >= 50 ? '📚 En proceso' : '⚠️ Necesita refuerzo';
+  document.getElementById('quizContainer').innerHTML = '';
+  document.getElementById('btnNext').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'block';
+  document.getElementById('quizResult').innerHTML = `
+    <div class="card" style="text-align:center;background:var(--verde-palido);border:2px solid var(--verde);">
+      <div style="font-size:3rem;margin-bottom:.5rem;">${pct >= 90 ? '🏆' : pct >= 70 ? '🎯' : '📖'}</div>
+      <h3 style="color:var(--verde-oscuro);font-size:1.3rem;">${nivel}</h3>
+      <p style="font-size:1.5rem;font-weight:700;color:var(--verde);margin:.5rem 0;">${score} / ${preguntas.length} correctas (${pct}%)</p>
+      <p style="font-size:.9rem;color:var(--gris-medio);">
+        ${pct >= 90 ? 'Domina los conceptos de traducción de modelos ER. ¡Excelente trabajo!' :
+          pct >= 70 ? 'Buen desempeño. Revisa los temas donde cometiste errores.' :
+          pct >= 50 ? 'Estás en proceso. Te recomendamos repasar las secciones de Entidades, Relaciones y Dominio.' :
+          'Necesitas reforzar los conceptos. Revisa desde la sección de Introducción con calma.'}
+      </p>
+    </div>`;
+}
+
+function resetQuiz() {
+  currentQ = 0; score = 0; answered = false;
+  document.getElementById('quizResult').style.display = 'none';
+  renderQuestion();
+}
+
+renderQuestion();
+</script>
 </body>
 </html>
